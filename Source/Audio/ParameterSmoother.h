@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 namespace grainhex {
 
 // Simple one-pole smoother for audio-rate parameter changes

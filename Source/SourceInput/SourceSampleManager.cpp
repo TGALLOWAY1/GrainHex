@@ -36,7 +36,7 @@ void SourceSampleManager::run()
         const juce::ScopedLock sl(pendingLock);
         fileToLoad = pendingFile;
         callback = pendingCallback;
-        pendingFile = {};
+        pendingFile = juce::File();
         pendingCallback = nullptr;
     }
 
