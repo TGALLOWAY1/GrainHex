@@ -79,11 +79,14 @@ void AudioEngine::audioDeviceIOCallbackWithContext(
         return;
     }
 
+    const auto state = transportState.load(std::memory_order_relaxed);
+
     if (granularEnabled.load(std::memory_order_relaxed))
     {
-        renderGranular(outputChannelData, numOutputChannels, numSamples);
+        if (state == TransportState::Playing)
+            renderGranular(outputChannelData, numOutputChannels, numSamples);
     }
-    else if (transportState.load(std::memory_order_relaxed) == TransportState::Playing)
+    else if (state == TransportState::Playing)
     {
         renderSamplePlayback(outputChannelData, numOutputChannels, numSamples);
     }

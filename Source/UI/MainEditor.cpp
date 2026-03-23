@@ -35,10 +35,15 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     {
         audioEngine.setSineTestEnabled(false);
         audioEngine.play();
+        updateTransportButtons();
     };
 
     addAndMakeVisible(stopButton);
-    stopButton.onClick = [this] { audioEngine.stop(); };
+    stopButton.onClick = [this]
+    {
+        audioEngine.stop();
+        updateTransportButtons();
+    };
 
     addAndMakeVisible(loadButton);
     loadButton.onClick = [this]
@@ -148,6 +153,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     statusLabel.setFont(juce::Font(11.0f));
 
     updateStatusLabel("Drop a sample or pick one from the browser");
+    updateTransportButtons();
 
     // Setup MIDI note callback
     audioEngine.getMidiManager().setNoteCallback(
@@ -175,14 +181,13 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     // Start timer (30 fps)
     startTimerHz(30);
 
-    // Load default factory sample so it sounds interesting on first launch
+    // Preload a default sample for quick auditioning, but do not auto-enable playback.
     auto* defaultSample = sampleBrowser.getDefaultSample();
     if (defaultSample != nullptr)
     {
         juce::MessageManager::callAsync([this, defaultSample]
         {
             loadFactorySample(*defaultSample);
-            granularToggle.setToggleState(true, juce::sendNotification);
         });
     }
 }
@@ -351,6 +356,7 @@ void MainEditor::loadFile(const juce::File& file)
             auto buffer = sampleManager.getCurrentBuffer();
             auto meta = sampleManager.getMetadata();
 
+            audioEngine.stop();
             audioEngine.setSourceSample(buffer, meta.originalSampleRate);
 
             if (meta.rootNote.midiNote >= 0)
@@ -366,6 +372,7 @@ void MainEditor::loadFile(const juce::File& file)
                 + " | " + juce::String(meta.numChannels) + "ch"
                 + " | " + juce::String(static_cast<int>(meta.originalSampleRate)) + " Hz";
             sampleInfoLabel.setText(info, juce::dontSendNotification);
+            updateTransportButtons();
         }
 
         updateStatusLabel(message);
@@ -374,6 +381,7 @@ void MainEditor::loadFile(const juce::File& file)
 
 void MainEditor::loadFactorySample(const FactorySample& sample)
 {
+    audioEngine.stop();
     audioEngine.setSourceSample(sample.buffer, sample.sampleRate);
 
     if (sample.rootMidiNote >= 0)
@@ -395,12 +403,20 @@ void MainEditor::loadFactorySample(const FactorySample& sample)
         + " | " + juce::String(static_cast<int>(sample.sampleRate)) + " Hz";
     sampleInfoLabel.setText(info, juce::dontSendNotification);
 
+    updateTransportButtons();
     updateStatusLabel("Loaded factory sample: " + sample.name);
 }
 
 void MainEditor::updateStatusLabel(const juce::String& text)
 {
     statusLabel.setText(text, juce::dontSendNotification);
+}
+
+void MainEditor::updateTransportButtons()
+{
+    auto isPlaying = audioEngine.getTransportState() == TransportState::Playing;
+    playButton.setEnabled(!isPlaying);
+    stopButton.setEnabled(isPlaying);
 }
 
 void MainEditor::pushGranularParams()
@@ -466,6 +482,8 @@ void MainEditor::pushModulationParams()
 
 void MainEditor::timerCallback()
 {
+    updateTransportButtons();
+
     // Update pitch display from audio thread snapshot
     auto pitch = audioEngine.getDetectedPitch();
     subPanel.setDetectedPitch(pitch);
@@ -587,6 +605,7 @@ void MainEditor::reloadFromHistory(const ResampleHistoryEntry* entry)
     if (entry == nullptr || entry->buffer == nullptr)
         return;
 
+    audioEngine.stop();
     audioEngine.setSourceSample(entry->buffer, entry->sampleRate);
 
     if (entry->rootNote.midiNote >= 0)
@@ -602,6 +621,7 @@ void MainEditor::reloadFromHistory(const ResampleHistoryEntry* entry)
         + " | 2ch"
         + " | " + juce::String(static_cast<int>(entry->sampleRate)) + " Hz";
     sampleInfoLabel.setText(info, juce::dontSendNotification);
+    updateTransportButtons();
 }
 
 } // namespace grainhex

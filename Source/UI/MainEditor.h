@@ -47,6 +47,7 @@ private:
     void loadFile(const juce::File& file);
     void loadFactorySample(const FactorySample& sample);
     void updateStatusLabel(const juce::String& text);
+    void updateTransportButtons();
 
     AudioEngine& audioEngine;
     SourceSampleManager& sampleManager;
