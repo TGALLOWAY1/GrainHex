@@ -31,6 +31,9 @@ public:
     // Set loop region (in samples)
     void setLoopRegion(int64_t startSample, int64_t endSample);
 
+    // Set active grain positions (normalized 0..1) for visualization
+    void setActiveGrainPositions(const std::vector<float>& positions);
+
     // Callback
     void setLoopRegionCallback(LoopRegionCallback cb) { loopCallback = std::move(cb); }
 
@@ -72,6 +75,9 @@ private:
     bool isDragging = false;
     float dragStartNorm = 0.0f;
     float dragEndNorm = 0.0f;
+
+    // Active grain positions (normalized)
+    std::vector<float> grainPositions;
 
     LoopRegionCallback loopCallback;
 

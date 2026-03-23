@@ -35,6 +35,11 @@ void WaveformView::setLoopRegion(int64_t startSample, int64_t endSample)
     repaint();
 }
 
+void WaveformView::setActiveGrainPositions(const std::vector<float>& positions)
+{
+    grainPositions = positions;
+}
+
 void WaveformView::generatePeakData()
 {
     peaks.clear();
@@ -116,6 +121,17 @@ void WaveformView::paint(juce::Graphics& g)
         float top = midY - peaks[static_cast<size_t>(i)].maxVal * halfHeight;
         float bottom = midY - peaks[static_cast<size_t>(i)].minVal * halfHeight;
         g.drawVerticalLine(static_cast<int>(x), top, bottom);
+    }
+
+    // Grain position markers
+    if (!grainPositions.empty())
+    {
+        g.setColour(juce::Colour(0x9016c784)); // Semi-transparent green
+        for (float pos : grainPositions)
+        {
+            float gx = normalizedToX(pos);
+            g.fillRect(gx - 1.0f, bounds.getY() + 2.0f, 3.0f, bounds.getHeight() - 4.0f);
+        }
     }
 
     // Playhead

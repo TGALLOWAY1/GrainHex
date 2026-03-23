@@ -126,8 +126,12 @@ void MainEditor::paint(juce::Graphics& g)
     g.setFont(12.0f);
     g.drawText("v0.2 — Phase 2", 160, 14, 120, 20, juce::Justification::centredLeft);
 
-    // Update playhead
+    // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
+    if (audioEngine.isGranularEnabled())
+        waveformView.setActiveGrainPositions(audioEngine.getGranularEngine().getActiveGrainPositions());
+    else
+        waveformView.setActiveGrainPositions({});
 }
 
 void MainEditor::resized()
