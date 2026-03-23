@@ -4,19 +4,25 @@ project(GrainHex VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch JUCE
-include(FetchContent)
-FetchContent_Declare(
-    JUCE
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG        7.0.12
-    GIT_SHALLOW    TRUE
-)
-# Pass Linux-specific JUCE defines via CXX flags so juceaide (built as sub-project during
-# configure) also picks them up. Use CXXFLAGS env var when configuring:
-#   CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_ALSA=0 -DJUCE_JACK=0" cmake ..
+set(GRAINHEX_LOCAL_JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE")
 
-FetchContent_MakeAvailable(JUCE)
+if(EXISTS "${GRAINHEX_LOCAL_JUCE_DIR}/CMakeLists.txt")
+    message(STATUS "Using local JUCE checkout at ${GRAINHEX_LOCAL_JUCE_DIR}")
+    add_subdirectory("${GRAINHEX_LOCAL_JUCE_DIR}" JUCE)
+else()
+    message(STATUS "Local JUCE checkout not found, fetching JUCE 7.0.12")
+    include(FetchContent)
+    FetchContent_Declare(
+        JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG        7.0.12
+        GIT_SHALLOW    TRUE
+    )
+    # Pass Linux-specific JUCE defines via CXX flags so juceaide (built as sub-project during
+    # configure) also picks them up. Use CXXFLAGS env var when configuring:
+    #   CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_ALSA=0 -DJUCE_JACK=0" cmake ..
+    FetchContent_MakeAvailable(JUCE)
+endif()
 
 # GrainHex standalone app
 juce_add_gui_app(GrainHex
