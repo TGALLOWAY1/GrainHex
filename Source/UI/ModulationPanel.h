@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Modulation/LFO.h"
 #include "Modulation/ADSREnvelope.h"
+#include "UI/GrainHexLookAndFeel.h"
 #include <functional>
 
 namespace grainhex {

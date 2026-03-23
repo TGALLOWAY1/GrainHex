@@ -56,17 +56,20 @@ ModulationPanel::ModulationPanel()
 
 void ModulationPanel::paint(juce::Graphics& g)
 {
-    g.setColour(juce::Colour(0xff1a1a2e));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(juce::Colour(Theme::bgPanel));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), Theme::cornerRadius);
 
-    g.setColour(juce::Colour(0xffff6b6b));
-    g.setFont(juce::Font(14.0f).boldened());
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
+
+    g.setColour(juce::Colour(Theme::accentRed));
+    g.setFont(juce::Font(Theme::fontSectionHead).boldened());
     g.drawText("MODULATION", 10, 4, 120, 20, juce::Justification::centredLeft);
 
     // Separator
-    int midX = getWidth() / 2;
-    g.setColour(juce::Colour(0xff333355));
-    g.drawVerticalLine(midX, 24.0f, static_cast<float>(getHeight() - 8));
+    int midY = getHeight() / 2 + 8;
+    g.setColour(juce::Colour(Theme::border));
+    g.drawHorizontalLine(midY, 8.0f, static_cast<float>(getWidth() - 8));
 }
 
 void ModulationPanel::resized()
@@ -74,15 +77,15 @@ void ModulationPanel::resized()
     auto area = getLocalBounds().reduced(8);
     area.removeFromTop(22); // Title
 
-    int halfWidth = area.getWidth() / 2;
+    int halfHeight = area.getHeight() / 2 - 2;
 
-    // LFO half (left)
-    auto lfoArea = area.removeFromLeft(halfWidth).reduced(4);
+    // LFO section (top)
+    auto lfoArea = area.removeFromTop(halfHeight).reduced(2);
     {
         auto topRow = lfoArea.removeFromTop(24);
-        lfoToggle.setBounds(topRow.removeFromLeft(60));
-        lfoShapeLabel.setBounds(topRow.removeFromLeft(40));
-        lfoShapeBox.setBounds(topRow.removeFromLeft(100));
+        lfoToggle.setBounds(topRow.removeFromLeft(50));
+        lfoShapeLabel.setBounds(topRow.removeFromLeft(35));
+        lfoShapeBox.setBounds(topRow);
 
         lfoArea.removeFromTop(4);
         auto knobRow = lfoArea;
@@ -97,8 +100,10 @@ void ModulationPanel::resized()
         lfoDepthSlider.setBounds(depthArea);
     }
 
-    // ADSR half (right)
-    auto envArea = area.reduced(4);
+    area.removeFromTop(4);
+
+    // ADSR section (bottom)
+    auto envArea = area.reduced(2);
     {
         auto topRow = envArea.removeFromTop(24);
         envToggle.setBounds(topRow.removeFromLeft(90));

@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Audio/AudioTypes.h"
 #include "Sub/SubOscillator.h"
+#include "UI/GrainHexLookAndFeel.h"
 #include <functional>
 
 namespace grainhex {

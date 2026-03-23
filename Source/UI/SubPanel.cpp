@@ -8,24 +8,24 @@ static void styleRotarySlider(juce::Slider& slider, double min, double max, doub
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 16);
     slider.setRange(min, max, interval);
     slider.setValue(defaultVal, juce::dontSendNotification);
-    slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffcc66ff)); // Purple for sub
-    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff333355));
-    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::lightgrey);
+    slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(Theme::accentPurple));
+    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(Theme::border));
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(Theme::textNormal));
     slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
 }
 
 static void styleLabel(juce::Label& label)
 {
     label.setJustificationType(juce::Justification::centred);
-    label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    label.setFont(juce::Font(11.0f));
+    label.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
+    label.setFont(juce::Font(Theme::fontLabel));
 }
 
 static void styleComboBox(juce::ComboBox& box)
 {
-    box.setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1a1a2e));
-    box.setColour(juce::ComboBox::textColourId, juce::Colours::lightgrey);
-    box.setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff333355));
+    box.setColour(juce::ComboBox::backgroundColourId, juce::Colour(Theme::bgControl));
+    box.setColour(juce::ComboBox::textColourId, juce::Colour(Theme::textNormal));
+    box.setColour(juce::ComboBox::outlineColourId, juce::Colour(Theme::border));
 }
 
 SubPanel::SubPanel()
@@ -33,7 +33,7 @@ SubPanel::SubPanel()
     // Enable toggle
     addAndMakeVisible(enableToggle);
     enableToggle.setToggleState(false, juce::dontSendNotification);
-    enableToggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(0xffcc66ff));
+    enableToggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(Theme::accentPurple));
     enableToggle.onClick = [this] { parameterChanged(); };
 
     // Level: 0-1, default 0.7
@@ -125,7 +125,7 @@ SubPanel::SubPanel()
     // Pitch display
     addAndMakeVisible(pitchNoteLabel);
     pitchNoteLabel.setJustificationType(juce::Justification::centred);
-    pitchNoteLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcc66ff));
+    pitchNoteLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentPurple));
     pitchNoteLabel.setFont(juce::Font(22.0f).boldened());
     pitchNoteLabel.setText("---", juce::dontSendNotification);
 
@@ -135,14 +135,14 @@ SubPanel::SubPanel()
 
 void SubPanel::paint(juce::Graphics& g)
 {
-    g.setColour(juce::Colour(0xff12122a));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(juce::Colour(Theme::bgPanel));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), Theme::cornerRadius);
 
-    g.setColour(juce::Colour(0xff333355));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
 
-    g.setColour(juce::Colour(0xffcc66ff));
-    g.setFont(juce::Font(13.0f).boldened());
+    g.setColour(juce::Colour(Theme::accentPurple));
+    g.setFont(juce::Font(Theme::fontSectionHead).boldened());
     g.drawText("SUB TUNER", 10, 4, 120, 20, juce::Justification::centredLeft);
 
     // Draw cents bar next to pitch note label
@@ -153,28 +153,28 @@ void SubPanel::paint(juce::Graphics& g)
     int barH = 30;
 
     // Background bar
-    g.setColour(juce::Colour(0xff1a1a2e));
+    g.setColour(juce::Colour(Theme::bgControl));
     g.fillRect(barX, barY, barW, barH);
-    g.setColour(juce::Colour(0xff333355));
+    g.setColour(juce::Colour(Theme::border));
     g.drawRect(barX, barY, barW, barH, 1);
 
     // Center line
     int centerX = barX + barW / 2;
-    g.setColour(juce::Colours::grey);
+    g.setColour(juce::Colour(Theme::textMuted));
     g.drawVerticalLine(centerX, static_cast<float>(barY), static_cast<float>(barY + barH));
 
-    // Cents indicator (map -50..+50 cents to bar width)
+    // Cents indicator
     if (pitchConfidence > 0.3f)
     {
         float centsNorm = juce::jlimit(-50.0f, 50.0f, pitchCents) / 50.0f;
         int indicatorX = centerX + static_cast<int>(centsNorm * (barW / 2 - 2));
-        g.setColour(juce::Colour(0xffcc66ff));
+        g.setColour(juce::Colour(Theme::accentPurple));
         g.fillRect(indicatorX - 1, barY + 2, 3, barH - 4);
     }
 
     // Confidence indicator
-    g.setFont(10.0f);
-    g.setColour(pitchConfidence > 0.5f ? juce::Colour(0xff16c784) : juce::Colours::grey);
+    g.setFont(Theme::fontSmall);
+    g.setColour(pitchConfidence > 0.5f ? juce::Colour(Theme::accentGreen) : juce::Colour(Theme::textMuted));
     g.drawText(juce::String(static_cast<int>(pitchConfidence * 100.0f)) + "%",
                barX, barY + barH + 2, barW, 14, juce::Justification::centred);
 }

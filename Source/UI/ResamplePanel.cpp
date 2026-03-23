@@ -13,12 +13,12 @@ void ResamplePanel::HistoryThumbnail::paint(juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
 
     // Background
-    auto bgColour = current ? juce::Colour(0xff1a3a2a) : juce::Colour(0xff1a1a2a);
+    auto bgColour = current ? juce::Colour(0xff1a3a2a) : juce::Colour(Theme::bgControl);
     g.setColour(bgColour);
     g.fillRoundedRectangle(bounds, 4.0f);
 
     // Border
-    auto borderColour = current ? juce::Colour(0xff16c784) : juce::Colour(0xff333355);
+    auto borderColour = current ? juce::Colour(Theme::accentGreen) : juce::Colour(Theme::border);
     g.setColour(borderColour);
     g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, current ? 2.0f : 1.0f);
 
@@ -29,7 +29,7 @@ void ResamplePanel::HistoryThumbnail::paint(juce::Graphics& g)
     auto waveArea = bounds.reduced(4.0f, 12.0f);
     float centreY = waveArea.getCentreY();
 
-    g.setColour(current ? juce::Colour(0xff16c784).withAlpha(0.8f) : juce::Colour(0xff6666aa));
+    g.setColour(current ? juce::Colour(Theme::accentGreen).withAlpha(0.8f) : juce::Colour(0xff6666aa));
 
     const int numPoints = static_cast<int>(historyEntry->previewMin.size());
     if (numPoints > 0)
@@ -66,7 +66,7 @@ void ResamplePanel::HistoryThumbnail::paint(juce::Graphics& g)
     // Exported indicator
     if (historyEntry->exported)
     {
-        g.setColour(juce::Colour(0xff16c784).withAlpha(0.6f));
+        g.setColour(juce::Colour(Theme::accentGreen).withAlpha(0.6f));
         g.setFont(9.0f);
         g.drawText("EXP", bounds.reduced(4.0f, 2.0f), juce::Justification::bottomRight);
     }
@@ -110,7 +110,7 @@ ResamplePanel::ResamplePanel()
 {
     // Resample button
     addAndMakeVisible(resampleButton);
-    resampleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff16c784));
+    resampleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::accentGreen));
     resampleButton.onClick = [this] { if (onResample) onResample(); };
 
     // Undo button
@@ -134,7 +134,7 @@ ResamplePanel::ResamplePanel()
     captureLengthSlider.setTextValueSuffix("s");
     addAndMakeVisible(captureLengthLabel);
     captureLengthLabel.setJustificationType(juce::Justification::centredRight);
-    captureLengthLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    captureLengthLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
 
     // Bit depth selector
     addAndMakeVisible(bitDepthSelector);
@@ -144,12 +144,12 @@ ResamplePanel::ResamplePanel()
     bitDepthSelector.setSelectedId(2, juce::dontSendNotification); // Default 24-bit
     addAndMakeVisible(bitDepthLabel);
     bitDepthLabel.setJustificationType(juce::Justification::centredRight);
-    bitDepthLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    bitDepthLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
 
     // History label
     addAndMakeVisible(historyLabel);
     historyLabel.setFont(juce::Font(14.0f).boldened());
-    historyLabel.setColour(juce::Label::textColourId, juce::Colour(0xff16c784));
+    historyLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentGreen));
 
     // Progress label
     addAndMakeVisible(progressLabel);
@@ -176,20 +176,20 @@ void ResamplePanel::paint(juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
 
     // Panel background
-    g.setColour(juce::Colour(0xff111122));
-    g.fillRoundedRectangle(bounds, 6.0f);
+    g.setColour(juce::Colour(Theme::bgPanel));
+    g.fillRoundedRectangle(bounds, Theme::cornerRadius);
 
     // Border
-    g.setColour(juce::Colour(0xff333355));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), 6.0f, 1.0f);
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
 
     // Capture progress bar
     if (captureProgress > 0.0f && captureProgress < 1.0f)
     {
         auto progressArea = bounds.reduced(10.0f).removeFromBottom(4.0f);
-        g.setColour(juce::Colour(0xff333355));
+        g.setColour(juce::Colour(Theme::border));
         g.fillRoundedRectangle(progressArea, 2.0f);
-        g.setColour(juce::Colour(0xff16c784));
+        g.setColour(juce::Colour(Theme::accentGreen));
         g.fillRoundedRectangle(progressArea.withWidth(progressArea.getWidth() * captureProgress), 2.0f);
     }
 }
