@@ -139,3 +139,17 @@ Source/
 - Resample history is linear-only in V1 — max 8 iterations
 - Bass-music-first defaults throughout
 - Factory content sounds interesting on first launch
+
+## Remaining Work
+
+The following items are not yet complete and are needed before a full release:
+
+- **Multi-platform testing** — Full build + functionality verification on macOS and Windows
+- **Stress testing** — Max grain count + sub + effects + modulation simultaneously; 1-hour stability
+- **Multi-sample-rate / buffer-size testing** — 44.1k/48k/96k, buffer sizes 64–1024
+- **MIDI testing** — Verify note input and pitch mapping on all platforms
+- **Cross-app drag-and-drop** — Temp file infrastructure ready, needs testing with DAWs
+- **Packaging** — macOS DMG installer, Windows installer, code signing
+- **Re-enable ALSA/JACK on Linux** — Currently disabled; decide whether to restore for real audio output
+
+See `URGENT_TODO.md` for a detailed manual verification checklist.

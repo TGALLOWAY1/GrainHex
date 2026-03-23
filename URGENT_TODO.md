@@ -1,33 +1,88 @@
-# URGENT TODO — GrainHex Build Setup
+# URGENT TODO — GrainHex Setup & Verification Guide
+
+## Quick Start — Build & Verify
+
+### 1. Clone and Build
+
+```bash
+git clone <repo-url>
+cd GrainHex
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
+
+### 2. Run the Application
+
+```bash
+# Linux
+./GrainHex_artefacts/GrainHex
+
+# macOS
+open GrainHex_artefacts/GrainHex.app
+
+# Windows
+GrainHex_artefacts\Release\GrainHex.exe
+```
+
+### 3. Verify Core Functionality
+
+**First Launch Check:**
+- App should open with a factory sample ("Classic Reese") already loaded
+- Granular mode should be enabled by default
+- Waveform should be visible with the loaded sample
+- You should hear sound when pressing Play (requires audio output device)
+
+**Manual Verification Checklist:**
+
+| Feature | How to Test | Expected Result |
+|---------|------------|-----------------|
+| **Factory Samples** | Open browser panel (right of waveform), select a sample, click Load | Sample loads, waveform updates |
+| **File Loading** | Click "Load" button or drag-and-drop WAV/AIFF/FLAC | File loads, root note detected |
+| **Granular Engine** | Toggle "Granular" on, adjust Size/Count/Position knobs | Sound changes with parameters |
+| **Sub Tuner** | Enable Sub toggle, verify pitch display updates | Sub bass added, pitch detected |
+| **Effects** | Enable Distortion and/or Filter (visible when Granular is on) | Sound is processed |
+| **Modulation** | Enable LFO/Envelope (visible when Granular is on) | Filter modulates over time |
+| **Resample** | Click "Resample" button with Granular enabled | Captures output, adds to history |
+| **History** | Click history thumbnails to revert | Source changes to clicked entry |
+| **Undo** | Click "Undo" after resampling | Reverts to previous state |
+| **WAV Export** | Click "Export WAV" or right-click history thumbnail | File save dialog, WAV written |
+| **Mono Lock** | Toggle "Mono" in footer | Stereo collapses to mono |
+| **Master Volume** | Drag volume slider in footer | Output level changes smoothly |
+| **Loop Region** | Click-drag on waveform to select region | Loop markers appear, playback loops region |
+| **MIDI** | Connect MIDI controller, play notes | Pitch shifts, MIDI indicator lights up |
+
+### 4. Run Unit Tests
+
+```bash
+cd build
+cmake -DGRAINHEX_BUILD_TESTS=ON ..
+cmake --build .
+ctest
+```
+
+---
 
 ## Build System & Dependencies by Platform
 
 ### macOS (Recommended Dev Environment)
 
-**Build system options:**
-- **Xcode** — Install from the Mac App Store. JUCE's Projucer can generate `.xcodeproj` files directly, or use CMake (see below).
-- **CMake** — Works natively on macOS. Install via `brew install cmake` or from https://cmake.org.
+**What you need:**
+1. **Xcode** (from Mac App Store — includes compiler toolchain)
+2. **CMake** (`brew install cmake` or https://cmake.org)
 
-**Dependencies:**
-macOS ships with CoreAudio, CoreMIDI, and all required graphics frameworks. Most of what JUCE needs is already part of the OS.
-
-**What you need to install:**
-1. **Xcode** (includes the Apple compiler toolchain and macOS SDK)
-2. **CMake** (if using the CMake route instead of Projucer)
-3. **JUCE source** — already fetched automatically via `FetchContent` in `CMakeLists.txt`
-
-**Build steps:**
+**Build:**
 ```bash
 mkdir build && cd build
 cmake ..
 cmake --build .
 ```
 
+macOS ships with CoreAudio, CoreMIDI, and all required frameworks. JUCE 7.0.12 is fetched automatically.
+
 ### Linux
 
-**Build system:** CMake (required).
-
-**Dependencies — must be installed manually:**
+**Dependencies — install manually:**
 ```bash
 # Debian / Ubuntu
 sudo apt-get install -y \
@@ -46,29 +101,25 @@ sudo dnf install -y \
     cmake gcc-c++ pkg-config
 ```
 
-> **Note:** The current `CMakeLists.txt` disables ALSA, JACK, XRandR, Xinerama, and XCursor via compile definitions. If you need these features, remove the corresponding `JUCE_*=0` flags.
-
-**Build steps:**
+**Build:**
 ```bash
 mkdir build && cd build
 cmake ..
 cmake --build .
 ```
 
+> **Note:** If some X11/ALSA dev headers are not available, pass CXXFLAGS:
+> ```bash
+> CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_ALSA=0 -DJUCE_JACK=0" cmake ..
+> ```
+
 ### Windows
 
-**Build system options:**
-- **Visual Studio 2019+** — CMake can generate `.sln` files with `-G "Visual Studio 17 2022"`.
-- **CMake + Ninja** — Faster builds if you have the MSVC toolchain installed.
-
-**Dependencies:**
-Windows ships with the audio and graphics APIs that JUCE needs (WASAPI, DirectX, etc.). No manual dependency installation required beyond the compiler.
-
-**What you need to install:**
-1. **Visual Studio 2019+** (with "Desktop development with C++" workload) or the standalone **MSVC Build Tools**
+**What you need:**
+1. **Visual Studio 2019+** (with "Desktop development with C++" workload) or standalone **MSVC Build Tools**
 2. **CMake** (bundled with Visual Studio, or install separately)
 
-**Build steps (Developer Command Prompt):**
+**Build (Developer Command Prompt):**
 ```bat
 mkdir build && cd build
 cmake ..
@@ -79,14 +130,22 @@ cmake --build . --config Release
 
 ## Cross-Platform Notes
 
-- JUCE handles most cross-platform abstractions. If you add any platform-specific code, use `#ifdef` guards or JUCE's platform macros (`JUCE_MAC`, `JUCE_LINUX`, `JUCE_WINDOWS`).
-- JUCE 7.0.12 is fetched automatically by CMake via `FetchContent` — no need to vendor it manually.
-- To build tests: `cmake -DGRAINHEX_BUILD_TESTS=ON ..`
+- JUCE handles all platform abstractions. Use `JUCE_MAC`, `JUCE_LINUX`, `JUCE_WINDOWS` for platform-specific code.
+- JUCE 7.0.12 is fetched automatically by CMake `FetchContent` — no manual download needed.
+- Factory samples are generated at runtime (no external asset files to manage).
 
 ---
 
 ## Outstanding Items
 
-- [ ] Verify full build on macOS and Windows (Linux sandbox build confirmed)
+- [ ] Verify full build and functionality on macOS and Windows (Linux build confirmed)
 - [ ] Decide whether to re-enable ALSA/JACK on Linux for real audio output
-- [ ] Test MIDI input on all platforms
+- [ ] Test MIDI input on all three platforms
+- [ ] Multi-sample-rate testing (44.1k, 48k, 96k)
+- [ ] Multi-buffer-size testing (64, 128, 256, 512, 1024)
+- [ ] Stress test: max grain count + sub + effects + modulation running simultaneously
+- [ ] 1-hour session stability test (memory should remain stable)
+- [ ] Cross-app drag-and-drop testing (temp file infrastructure ready)
+- [ ] Create macOS DMG installer
+- [ ] Create Windows installer
+- [ ] Code signing (if certificates available)
