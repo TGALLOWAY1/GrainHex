@@ -5,6 +5,7 @@
 #include "Audio/AudioTypes.h"
 #include "Audio/ParameterSmoother.h"
 #include "Granular/GranularEngine.h"
+#include "Sub/SubEngine.h"
 #include <atomic>
 #include <memory>
 
@@ -65,6 +66,9 @@ public:
     bool isGranularEnabled() const;
     GranularEngine& getGranularEngine() { return granularEngine; }
 
+    // Sub engine
+    SubEngine& getSubEngine() { return subEngine; }
+
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
 private:
@@ -96,6 +100,9 @@ private:
     // Granular
     GranularEngine granularEngine;
     std::atomic<bool> granularEnabled { false };
+
+    // Sub
+    SubEngine subEngine;
 
     // Master volume
     ParameterSmoother volumeSmoother;

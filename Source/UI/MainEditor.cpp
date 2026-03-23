@@ -124,7 +124,7 @@ void MainEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
-    g.drawText("v0.2 — Phase 2", 160, 14, 120, 20, juce::Justification::centredLeft);
+    g.drawText("v0.3 — Phase 3", 160, 14, 120, 20, juce::Justification::centredLeft);
 
     // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());

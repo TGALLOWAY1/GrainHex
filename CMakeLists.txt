@@ -45,6 +45,9 @@ target_sources(GrainHex PRIVATE
     Source/Granular/GrainScheduler.cpp
     Source/Granular/GranularEngine.cpp
 
+    # Sub
+    Source/Sub/SubEngine.cpp
+
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
@@ -62,6 +65,11 @@ target_compile_definitions(GrainHex PRIVATE
     JUCE_USE_CURL=0
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
+    JUCE_USE_XRANDR=0
+    JUCE_USE_XINERAMA=0
+    JUCE_USE_XCURSOR=0
+    JUCE_ALSA=0
+    JUCE_JACK=0
 )
 
 target_link_libraries(GrainHex PRIVATE
