@@ -174,6 +174,9 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
 
     granularEngine.processBlock(outL, outR, numSamples, deviceSampleRate);
 
+    // Feed pitch detector with granular output BEFORE sub mix (avoids feedback)
+    subEngine.feedPitchDetector(outL, outR, numSamples);
+
     // Apply HP filter to granular output (removes low end before sub mix)
     subEngine.applyGranularHP(outL, outR, numSamples);
 

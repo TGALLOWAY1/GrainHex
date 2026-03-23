@@ -68,6 +68,7 @@ public:
 
     // Sub engine
     SubEngine& getSubEngine() { return subEngine; }
+    PitchInfo getDetectedPitch() const { return subEngine.getDetectedPitch(); }
 
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 

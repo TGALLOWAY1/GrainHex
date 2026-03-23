@@ -2,6 +2,7 @@
 
 #include "Sub/SubOscillator.h"
 #include "Sub/BiquadFilter.h"
+#include "Sub/PitchDetector.h"
 #include "Audio/ParameterSmoother.h"
 #include <atomic>
 #include <array>
@@ -43,6 +44,14 @@ public:
 
     bool isEnabled() const { return subEnabled.load(std::memory_order_relaxed); }
 
+    // Feed granular output to pitch detector (call before sub mix)
+    void feedPitchDetector(const float* left, const float* right, int numSamples);
+
+    // Get detected pitch for UI display (thread-safe snapshot)
+    PitchInfo getDetectedPitch() const;
+
+    PitchDetector& getPitchDetector() { return pitchDetector; }
+
 private:
     void updateFilterCoefficients();
 
@@ -62,6 +71,17 @@ private:
     std::atomic<float> granularHPFreq { kDefaultGranularHP };
     std::atomic<float> subLPFreq { kDefaultSubLP };
     bool filtersNeedUpdate = true;
+
+    // Pitch detection
+    PitchDetector pitchDetector;
+    // Atomic snapshot for UI thread to read
+    std::atomic<float> detectedFrequency { 0.0f };
+    std::atomic<float> detectedConfidence { 0.0f };
+    std::atomic<int> detectedMidiNote { -1 };
+    std::atomic<float> detectedCentsOffset { 0.0f };
+
+    // Mono mix buffer for pitch analysis (preallocated)
+    std::array<float, kMaxBlockSize> monoMixBuffer {};
 
     double currentSampleRate = 44100.0;
 };

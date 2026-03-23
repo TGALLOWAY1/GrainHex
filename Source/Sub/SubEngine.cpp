@@ -21,6 +21,8 @@ void SubEngine::setSampleRate(double sampleRate)
     subLP.reset();
     filtersNeedUpdate = true;
     updateFilterCoefficients();
+
+    pitchDetector.setSampleRate(sampleRate);
 }
 
 void SubEngine::setGranularHPFreq(float hz)
@@ -92,6 +94,33 @@ void SubEngine::processBlock(float* outL, float* outR, int numSamples)
         if (outR != outL)
             outR[i] += sample;
     }
+}
+
+void SubEngine::feedPitchDetector(const float* left, const float* right, int numSamples)
+{
+    // Mix to mono for pitch analysis
+    int count = std::min(numSamples, kMaxBlockSize);
+    for (int i = 0; i < count; ++i)
+        monoMixBuffer[static_cast<size_t>(i)] = (left[i] + right[i]) * 0.5f;
+
+    pitchDetector.feedSamples(monoMixBuffer.data(), count);
+
+    // Run detection and update atomic snapshot
+    PitchInfo pitch = pitchDetector.detect();
+    detectedFrequency.store(pitch.frequency, std::memory_order_relaxed);
+    detectedConfidence.store(pitch.confidence, std::memory_order_relaxed);
+    detectedMidiNote.store(pitch.midiNote, std::memory_order_relaxed);
+    detectedCentsOffset.store(pitch.centsOffset, std::memory_order_relaxed);
+}
+
+PitchInfo SubEngine::getDetectedPitch() const
+{
+    PitchInfo info;
+    info.frequency = detectedFrequency.load(std::memory_order_relaxed);
+    info.confidence = detectedConfidence.load(std::memory_order_relaxed);
+    info.midiNote = detectedMidiNote.load(std::memory_order_relaxed);
+    info.centsOffset = detectedCentsOffset.load(std::memory_order_relaxed);
+    return info;
 }
 
 } // namespace grainhex
