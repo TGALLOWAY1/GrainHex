@@ -9,6 +9,7 @@
 #include "UI/SubPanel.h"
 #include "UI/EffectsPanel.h"
 #include "UI/ModulationPanel.h"
+#include "UI/ResamplePanel.h"
 
 namespace grainhex {
 
@@ -43,6 +44,12 @@ private:
     void pushSubParams();
     void pushEffectsParams();
     void pushModulationParams();
+    void handleResample();
+    void handleRevertTo(int index);
+    void handleUndo();
+    void handleExportEntry(int index);
+    void handleExportCurrent();
+    void reloadFromHistory(const ResampleHistoryEntry* entry);
     void timerCallback() override;
 
     // UI components
@@ -51,6 +58,7 @@ private:
     SubPanel subPanel;
     EffectsPanel effectsPanel;
     ModulationPanel modulationPanel;
+    ResamplePanel resamplePanel;
 
     juce::TextButton playButton { "Play" };
     juce::TextButton stopButton { "Stop" };

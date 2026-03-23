@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(GrainHex VERSION 0.4.0 LANGUAGES CXX)
+project(GrainHex VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,12 +12,16 @@ FetchContent_Declare(
     GIT_TAG        7.0.12
     GIT_SHALLOW    TRUE
 )
+# Pass Linux-specific JUCE defines via CXX flags so juceaide (built as sub-project during
+# configure) also picks them up. Use CXXFLAGS env var when configuring:
+#   CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_ALSA=0 -DJUCE_JACK=0" cmake ..
+
 FetchContent_MakeAvailable(JUCE)
 
 # GrainHex standalone app
 juce_add_gui_app(GrainHex
     PRODUCT_NAME "GrainHex"
-    VERSION "0.4.0"
+    VERSION "0.5.0"
     COMPANY_NAME "GrainHex"
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -58,6 +62,10 @@ target_sources(GrainHex PRIVATE
     # MIDI (Phase 4)
     # Header-only: MidiManager.h
 
+    # Resample (Phase 5)
+    Source/Resample/ResampleEngine.cpp
+    # Header-only: WavExporter.h
+
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
@@ -65,6 +73,7 @@ target_sources(GrainHex PRIVATE
     Source/UI/SubPanel.cpp
     Source/UI/EffectsPanel.cpp
     Source/UI/ModulationPanel.cpp
+    Source/UI/ResamplePanel.cpp
 )
 
 target_include_directories(GrainHex PRIVATE

@@ -9,6 +9,7 @@
 #include "FX/EffectsChain.h"
 #include "Modulation/ModulationEngine.h"
 #include "MIDI/MidiManager.h"
+#include "Resample/ResampleEngine.h"
 #include <atomic>
 #include <memory>
 
@@ -81,6 +82,10 @@ public:
     // MIDI manager (Phase 4)
     MidiManager& getMidiManager() { return midiManager; }
 
+    // Resample engine (Phase 5)
+    ResampleEngine& getResampleEngine() { return resampleEngine; }
+    double getDeviceSampleRate() const { return deviceSampleRate; }
+
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
 private:
@@ -125,6 +130,9 @@ private:
 
     // MIDI (Phase 4)
     MidiManager midiManager;
+
+    // Resample (Phase 5)
+    ResampleEngine resampleEngine;
 
     // Master volume
     ParameterSmoother volumeSmoother;
