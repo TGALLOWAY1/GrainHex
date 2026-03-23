@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(GrainHex VERSION 0.3.0 LANGUAGES CXX)
+project(GrainHex VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(JUCE)
 # GrainHex standalone app
 juce_add_gui_app(GrainHex
     PRODUCT_NAME "GrainHex"
-    VERSION "0.3.0"
+    VERSION "0.4.0"
     COMPANY_NAME "GrainHex"
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -49,11 +49,22 @@ target_sources(GrainHex PRIVATE
     Source/Sub/SubEngine.cpp
     Source/Sub/PitchDetector.cpp
 
+    # FX (Phase 4)
+    # Header-only: DistortionProcessor.h, FilterProcessor.h, EffectsChain.h
+
+    # Modulation (Phase 4)
+    # Header-only: LFO.h, ADSREnvelope.h, ModulationEngine.h
+
+    # MIDI (Phase 4)
+    # Header-only: MidiManager.h
+
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
     Source/UI/GranularPanel.cpp
     Source/UI/SubPanel.cpp
+    Source/UI/EffectsPanel.cpp
+    Source/UI/ModulationPanel.cpp
 )
 
 target_include_directories(GrainHex PRIVATE

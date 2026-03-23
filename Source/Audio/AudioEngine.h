@@ -6,6 +6,9 @@
 #include "Audio/ParameterSmoother.h"
 #include "Granular/GranularEngine.h"
 #include "Sub/SubEngine.h"
+#include "FX/EffectsChain.h"
+#include "Modulation/ModulationEngine.h"
+#include "MIDI/MidiManager.h"
 #include <atomic>
 #include <memory>
 
@@ -15,8 +18,7 @@ class SourceSampleManager;
 
 /**
  * AudioEngine owns the audio device and callback.
- * Phase 1: plays loaded samples with looping.
- * Includes a sine test mode for verifying the audio path.
+ * Phase 4: adds effects chain, modulation, and MIDI processing.
  */
 class AudioEngine : public juce::AudioIODeviceCallback
 {
@@ -70,12 +72,22 @@ public:
     SubEngine& getSubEngine() { return subEngine; }
     PitchInfo getDetectedPitch() const { return subEngine.getDetectedPitch(); }
 
+    // Effects chain (Phase 4)
+    EffectsChain& getEffectsChain() { return effectsChain; }
+
+    // Modulation engine (Phase 4)
+    ModulationEngine& getModulationEngine() { return modulationEngine; }
+
+    // MIDI manager (Phase 4)
+    MidiManager& getMidiManager() { return midiManager; }
+
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
 private:
     void renderSineTest(float* const* outputChannelData, int numOutputChannels, int numSamples);
     void renderSamplePlayback(float* const* outputChannelData, int numOutputChannels, int numSamples);
     void renderGranular(float* const* outputChannelData, int numOutputChannels, int numSamples);
+    void applyModulation(float* outL, float* outR, int numSamples);
 
     juce::AudioDeviceManager deviceManager;
 
@@ -104,6 +116,15 @@ private:
 
     // Sub
     SubEngine subEngine;
+
+    // Effects (Phase 4) — granular only
+    EffectsChain effectsChain;
+
+    // Modulation (Phase 4)
+    ModulationEngine modulationEngine;
+
+    // MIDI (Phase 4)
+    MidiManager midiManager;
 
     // Master volume
     ParameterSmoother volumeSmoother;

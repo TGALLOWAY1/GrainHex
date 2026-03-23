@@ -15,6 +15,7 @@ AudioEngine::~AudioEngine()
 
 void AudioEngine::initialise()
 {
+    // Enable MIDI input
     auto result = deviceManager.initialiseWithDefaultDevices(0, 2);
     if (result.isNotEmpty())
     {
@@ -24,6 +25,14 @@ void AudioEngine::initialise()
         deviceManager.getAudioDeviceSetup(setup);
         setup.bufferSize = 512;
         deviceManager.setAudioDeviceSetup(setup, true);
+    }
+
+    // Enable all available MIDI inputs
+    auto midiDevices = juce::MidiInput::getAvailableDevices();
+    for (auto& dev : midiDevices)
+    {
+        if (!deviceManager.isMidiInputDeviceEnabled(dev.identifier))
+            deviceManager.setMidiInputDeviceEnabled(dev.identifier, true);
     }
 
     deviceManager.addAudioCallback(this);
@@ -40,6 +49,8 @@ void AudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     deviceSampleRate = device->getCurrentSampleRate();
     volumeSmoother.setSmoothingTime(0.01f, deviceSampleRate);
     subEngine.setSampleRate(deviceSampleRate);
+    effectsChain.setSampleRate(deviceSampleRate);
+    modulationEngine.setSampleRate(deviceSampleRate);
     sinePhase = 0.0;
     DBG("AudioEngine: Device started at " + juce::String(deviceSampleRate) + " Hz, buffer "
         + juce::String(device->getCurrentBufferSizeSamples()));
@@ -174,8 +185,14 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
 
     granularEngine.processBlock(outL, outR, numSamples, deviceSampleRate);
 
-    // Feed pitch detector with granular output BEFORE sub mix (avoids feedback)
+    // Feed pitch detector with granular output BEFORE effects/sub mix (avoids feedback)
     subEngine.feedPitchDetector(outL, outR, numSamples);
+
+    // Apply modulation (LFO + envelope) per-sample to effects parameters
+    applyModulation(outL, outR, numSamples);
+
+    // Effects chain: distortion -> filter (granular only, sub bypasses)
+    effectsChain.process(outL, outR, numSamples);
 
     // Apply HP filter to granular output (removes low end before sub mix)
     subEngine.applyGranularHP(outL, outR, numSamples);
@@ -195,6 +212,24 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
     // Copy to remaining channels
     for (int ch = 2; ch < numOutputChannels; ++ch)
         juce::FloatVectorOperations::copy(outputChannelData[ch], outL, numSamples);
+}
+
+void AudioEngine::applyModulation(float* /*outL*/, float* /*outR*/, int numSamples)
+{
+    // Tick modulation sources for each sample in the block
+    // and apply the aggregate modulation to the filter envelope input
+    for (int i = 0; i < numSamples; ++i)
+    {
+        auto modValues = modulationEngine.tick();
+
+        // Apply envelope modulation to filter (default routing)
+        float filterEnvMod = modulationEngine.getModulationValue(
+            ModTarget::FilterCutoff, modValues.lfo, modValues.env);
+
+        // Clamp and pass to filter
+        effectsChain.getFilter().setEnvelopeModulation(
+            juce::jlimit(0.0f, 1.0f, filterEnvMod + modValues.env));
+    }
 }
 
 void AudioEngine::setGranularEnabled(bool enabled)

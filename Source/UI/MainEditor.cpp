@@ -74,6 +74,8 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
         bool enabled = granularToggle.getToggleState();
         audioEngine.setGranularEnabled(enabled);
         granularPanel.setVisible(enabled);
+        effectsPanel.setVisible(enabled);
+        modulationPanel.setVisible(enabled);
         resized();
     };
 
@@ -85,6 +87,16 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     // Sub panel
     addAndMakeVisible(subPanel);
     subPanel.onParameterChanged = [this] { pushSubParams(); };
+
+    // Effects panel (Phase 4)
+    addAndMakeVisible(effectsPanel);
+    effectsPanel.setVisible(false);
+    effectsPanel.onParameterChanged = [this] { pushEffectsParams(); };
+
+    // Modulation panel (Phase 4)
+    addAndMakeVisible(modulationPanel);
+    modulationPanel.setVisible(false);
+    modulationPanel.onParameterChanged = [this] { pushModulationParams(); };
 
     // Volume
     addAndMakeVisible(volumeSlider);
@@ -112,11 +124,42 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     sampleInfoLabel.setJustificationType(juce::Justification::centredLeft);
     sampleInfoLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
 
+    // MIDI activity indicator
+    addAndMakeVisible(midiActivityLabel);
+    midiActivityLabel.setText("MIDI", juce::dontSendNotification);
+    midiActivityLabel.setJustificationType(juce::Justification::centred);
+    midiActivityLabel.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
+    midiActivityLabel.setFont(juce::Font(11.0f));
+
     updateStatusLabel("Drop a WAV, AIFF, or FLAC file to begin");
 
-    setSize(900, 850);
+    // Setup MIDI note callback for granular pitch + envelope trigger
+    audioEngine.getMidiManager().setNoteCallback(
+        [this](int midiNote, float /*velocity*/, bool isNoteOn)
+        {
+            auto& ge = audioEngine.getGranularEngine();
+            auto& mm = audioEngine.getMidiManager();
+            auto& me = audioEngine.getModulationEngine();
 
-    // Start timer for pitch display updates (30 fps)
+            if (isNoteOn)
+            {
+                // Map MIDI note to granular pitch relative to source root
+                float pitchOffset = mm.getPitchOffsetFromRoot(midiNote);
+                ge.setPitchSemitones(pitchOffset);
+
+                // Trigger envelope on note-on
+                me.getEnvelope().noteOn();
+            }
+            else
+            {
+                // Release envelope on note-off
+                me.getEnvelope().noteOff();
+            }
+        });
+
+    setSize(900, 1100);
+
+    // Start timer for pitch display + MIDI activity updates (30 fps)
     startTimerHz(30);
 }
 
@@ -131,7 +174,7 @@ void MainEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
-    g.drawText("v0.3 — Phase 3", 160, 14, 120, 20, juce::Justification::centredLeft);
+    g.drawText("v0.4 — Phase 4", 160, 14, 120, 20, juce::Justification::centredLeft);
 
     // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
@@ -149,6 +192,7 @@ void MainEditor::resized()
     auto topBar = area.removeFromTop(40);
 
     // Root note display (top right)
+    midiActivityLabel.setBounds(topBar.removeFromRight(40));
     rootNoteLabel.setBounds(topBar.removeFromRight(120));
 
     area.removeFromTop(5);
@@ -182,6 +226,20 @@ void MainEditor::resized()
     if (granularPanel.isVisible())
     {
         granularPanel.setBounds(area.removeFromTop(170));
+        area.removeFromTop(8);
+    }
+
+    // Effects panel (visible when granular enabled)
+    if (effectsPanel.isVisible())
+    {
+        effectsPanel.setBounds(area.removeFromTop(140));
+        area.removeFromTop(8);
+    }
+
+    // Modulation panel (visible when granular enabled)
+    if (modulationPanel.isVisible())
+    {
+        modulationPanel.setBounds(area.removeFromTop(140));
         area.removeFromTop(8);
     }
 
@@ -235,6 +293,10 @@ void MainEditor::loadFile(const juce::File& file)
             // Publish to audio engine
             audioEngine.setSourceSample(buffer, meta.originalSampleRate);
 
+            // Set root note for MIDI pitch mapping
+            if (meta.rootNote.midiNote >= 0)
+                audioEngine.getMidiManager().setSourceRootNote(meta.rootNote.midiNote);
+
             // Update waveform
             waveformView.setSource(buffer, meta.originalSampleRate);
             waveformView.setLoopRegion(0, meta.numSamples);
@@ -287,11 +349,53 @@ void MainEditor::pushSubParams()
     se.setSubLPFreq(subPanel.getSubLPFreq());
 }
 
+void MainEditor::pushEffectsParams()
+{
+    auto& ec = audioEngine.getEffectsChain();
+
+    // Distortion
+    ec.getDistortion().setEnabled(effectsPanel.getDistortionEnabled());
+    ec.getDistortion().setMode(effectsPanel.getDistortionMode());
+    ec.getDistortion().setDrive(effectsPanel.getDrive());
+    ec.getDistortion().setMix(effectsPanel.getDistortionMix());
+
+    // Filter
+    ec.getFilter().setEnabled(effectsPanel.getFilterEnabled());
+    ec.getFilter().setMode(effectsPanel.getFilterMode());
+    ec.getFilter().setCutoff(effectsPanel.getCutoff());
+    ec.getFilter().setResonance(effectsPanel.getResonance());
+    ec.getFilter().setEnvelopeAmount(effectsPanel.getEnvelopeAmount());
+}
+
+void MainEditor::pushModulationParams()
+{
+    auto& me = audioEngine.getModulationEngine();
+
+    // LFO
+    me.getLFO().setEnabled(modulationPanel.getLFOEnabled());
+    me.getLFO().setShape(modulationPanel.getLFOShape());
+    me.getLFO().setRate(modulationPanel.getLFORate());
+    me.getLFO().setDepth(modulationPanel.getLFODepth());
+
+    // Envelope
+    me.getEnvelope().setEnabled(modulationPanel.getEnvelopeEnabled());
+    me.getEnvelope().setAttack(modulationPanel.getAttack());
+    me.getEnvelope().setDecay(modulationPanel.getDecay());
+    me.getEnvelope().setSustain(modulationPanel.getSustain());
+    me.getEnvelope().setRelease(modulationPanel.getRelease());
+}
+
 void MainEditor::timerCallback()
 {
     // Update pitch display from audio thread snapshot
     auto pitch = audioEngine.getDetectedPitch();
     subPanel.setDetectedPitch(pitch);
+
+    // Update MIDI activity indicator
+    if (audioEngine.getMidiManager().consumeActivity())
+        midiActivityLabel.setColour(juce::Label::textColourId, juce::Colour(0xff16c784));
+    else
+        midiActivityLabel.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
 }
 
 } // namespace grainhex
