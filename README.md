@@ -6,11 +6,22 @@ A standalone desktop granular synthesizer built for bass music producers.
 
 GrainHex combines three core systems:
 
-1. **High-density granular engine** — the primary sound source
+1. **High-density granular engine** — the primary sound source with 9 parameters and 128+ grain support
 2. **Auto-tuned sub layer** — tracks the granular output's detected pitch (not MIDI) to generate a clean sub bass
-3. **Internal resample loop** — for iterative sound design (linear history, up to 8 iterations in V1)
+3. **Internal resample loop** — one-click capture, linear history (up to 8 iterations), revert, undo, and WAV export
 
 Built with **C++17** and **JUCE 7**.
+
+## Current Status — v0.5.0 (Phase 5 Complete)
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1. Foundation | Done | App shell, audio I/O, sample loading, waveform, playback, looping, root note detection |
+| 2. Granular Engine | Done | 9-parameter grain engine, scheduler, visualization, 128+ grain optimization |
+| 3. Sub Tuner | Done | Sub oscillator, auto/manual tuning, YIN pitch detector, crossover filters |
+| 4. Effects & Modulation | Done | Distortion (soft/hard/wavefold), multi-mode filter, LFO, ADSR, MIDI input |
+| 5. Resample & Export | Done | Output capture, reload-as-source, 8-entry history with thumbnails, WAV export (16/24/32-float) |
+| 6. Polish & Release | Next | Final layout, factory content, testing, packaging |
 
 ## Building
 
@@ -40,6 +51,11 @@ cmake ..
 cmake --build .
 ```
 
+On Linux, if Xrandr/Xinerama/Xcursor dev headers are not installed, pass defines via CXXFLAGS:
+```bash
+CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_ALSA=0 -DJUCE_JACK=0" cmake ..
+```
+
 JUCE 7.0.12 is fetched automatically via CMake `FetchContent` — no manual download needed.
 
 ### Tests
@@ -59,6 +75,10 @@ Source/
 ├── SourceInput/   # Sample loading, root note detection
 ├── Granular/      # Grain voices, scheduling, window functions
 ├── Sub/           # Sub oscillator engine, pitch detection
+├── FX/            # Distortion and filter processors
+├── Modulation/    # LFO, ADSR envelope, modulation routing
+├── MIDI/          # MIDI input, note-to-pitch mapping, CC learn
+├── Resample/      # Resample engine, history, WAV export
 ├── UI/            # Editor panels, waveform display
 └── Tests/         # Unit tests
 ```
@@ -76,4 +96,5 @@ Source/
 - Protect the audio thread — no allocations, file I/O, or blocking locks in the audio callback
 - Sub follows detected granular pitch, not MIDI
 - Effects process granular only; sub bypasses by default to preserve clean low end
+- Resample history is linear-only in V1 — max 8 iterations
 - Bass-music-first defaults throughout

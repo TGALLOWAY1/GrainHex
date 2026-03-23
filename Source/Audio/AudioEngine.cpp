@@ -209,6 +209,9 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
             outR[i] *= vol;
     }
 
+    // Feed resample capture with final mixed output (post-volume)
+    resampleEngine.feedCapture(outL, outR, numSamples);
+
     // Copy to remaining channels
     for (int ch = 2; ch < numOutputChannels; ++ch)
         juce::FloatVectorOperations::copy(outputChannelData[ch], outL, numSamples);

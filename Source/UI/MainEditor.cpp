@@ -98,6 +98,19 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     modulationPanel.setVisible(false);
     modulationPanel.onParameterChanged = [this] { pushModulationParams(); };
 
+    // Resample panel (Phase 5)
+    addAndMakeVisible(resamplePanel);
+    resamplePanel.onResample = [this] { handleResample(); };
+    resamplePanel.onRevertTo = [this](int index) { handleRevertTo(index); };
+    resamplePanel.onUndo = [this] { handleUndo(); };
+    resamplePanel.onExport = [this](int index) { handleExportEntry(index); };
+    resamplePanel.onExportCurrent = [this] { handleExportCurrent(); };
+    resamplePanel.onClearHistory = [this]
+    {
+        audioEngine.getResampleEngine().clearHistory();
+        resamplePanel.updateFromEngine(audioEngine.getResampleEngine());
+    };
+
     // Volume
     addAndMakeVisible(volumeSlider);
     volumeSlider.setRange(0.0, 1.0, 0.01);
@@ -157,7 +170,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
             }
         });
 
-    setSize(900, 1100);
+    setSize(900, 1280);
 
     // Start timer for pitch display + MIDI activity updates (30 fps)
     startTimerHz(30);
@@ -174,7 +187,7 @@ void MainEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
-    g.drawText("v0.4 — Phase 4", 160, 14, 120, 20, juce::Justification::centredLeft);
+    g.drawText("v0.5 — Phase 5", 160, 14, 120, 20, juce::Justification::centredLeft);
 
     // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
@@ -245,6 +258,10 @@ void MainEditor::resized()
 
     // Sub panel (always visible)
     subPanel.setBounds(area.removeFromTop(150));
+    area.removeFromTop(8);
+
+    // Resample panel (Phase 5)
+    resamplePanel.setBounds(area.removeFromTop(160));
     area.removeFromTop(8);
 
     // Sample info row
@@ -391,11 +408,145 @@ void MainEditor::timerCallback()
     auto pitch = audioEngine.getDetectedPitch();
     subPanel.setDetectedPitch(pitch);
 
+    // Update resample capture progress
+    auto& re = audioEngine.getResampleEngine();
+    if (re.isCapturing())
+        resamplePanel.setCaptureProgress(re.getCaptureProgress());
+
     // Update MIDI activity indicator
     if (audioEngine.getMidiManager().consumeActivity())
         midiActivityLabel.setColour(juce::Label::textColourId, juce::Colour(0xff16c784));
     else
         midiActivityLabel.setColour(juce::Label::textColourId, juce::Colours::darkgrey);
+}
+
+void MainEditor::handleResample()
+{
+    auto& re = audioEngine.getResampleEngine();
+    if (re.isCapturing())
+        return;
+
+    if (!audioEngine.isGranularEnabled())
+    {
+        updateStatusLabel("Enable Granular mode before resampling");
+        return;
+    }
+
+    // Check overflow warning
+    if (re.oldestNeverExported())
+        updateStatusLabel("Warning: oldest history entry was never exported and will be removed");
+
+    float lengthSec = resamplePanel.getCaptureLengthSeconds();
+    double sr = audioEngine.getDeviceSampleRate();
+
+    re.startCapture(sr, static_cast<double>(lengthSec),
+        [this](const ResampleHistoryEntry& entry)
+        {
+            // Reload captured audio as new source
+            reloadFromHistory(&entry);
+            resamplePanel.updateFromEngine(audioEngine.getResampleEngine());
+            resamplePanel.setCaptureProgress(0.0f);
+            updateStatusLabel("Resample #" + juce::String(entry.id) + " captured — "
+                             + juce::String(entry.getLengthSeconds(), 1) + "s"
+                             + " | Root: " + entry.rootNote.getNoteName());
+        });
+
+    updateStatusLabel("Capturing resample...");
+}
+
+void MainEditor::handleRevertTo(int index)
+{
+    auto& re = audioEngine.getResampleEngine();
+    auto* entry = re.revertTo(index);
+    if (entry != nullptr)
+    {
+        reloadFromHistory(entry);
+        resamplePanel.updateFromEngine(re);
+        updateStatusLabel("Reverted to resample #" + juce::String(entry->id));
+    }
+}
+
+void MainEditor::handleUndo()
+{
+    auto& re = audioEngine.getResampleEngine();
+    auto* entry = re.undo();
+    if (entry != nullptr)
+    {
+        reloadFromHistory(entry);
+        resamplePanel.updateFromEngine(re);
+        updateStatusLabel("Undo — reverted to resample #" + juce::String(entry->id));
+    }
+}
+
+void MainEditor::handleExportEntry(int index)
+{
+    auto& re = audioEngine.getResampleEngine();
+    auto* entry = re.getHistoryEntry(index);
+    if (entry == nullptr || entry->buffer == nullptr)
+        return;
+
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Export Resample as WAV",
+        juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
+            .getChildFile("GrainHex_resample_" + juce::String(entry->id) + ".wav"),
+        "*.wav");
+
+    chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, index, entry, chooser](const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (file == juce::File())
+                return;
+
+            auto bitDepth = resamplePanel.getBitDepth();
+            bool ok = WavExporter::exportToWav(*entry->buffer, entry->sampleRate, file, bitDepth);
+
+            if (ok)
+            {
+                audioEngine.getResampleEngine().markExported(index);
+                resamplePanel.updateFromEngine(audioEngine.getResampleEngine());
+                updateStatusLabel("Exported: " + file.getFileName());
+            }
+            else
+            {
+                updateStatusLabel("Export failed: " + file.getFileName());
+            }
+        });
+}
+
+void MainEditor::handleExportCurrent()
+{
+    auto& re = audioEngine.getResampleEngine();
+    int current = re.getCurrentIndex();
+    if (current >= 0)
+        handleExportEntry(current);
+}
+
+void MainEditor::reloadFromHistory(const ResampleHistoryEntry* entry)
+{
+    if (entry == nullptr || entry->buffer == nullptr)
+        return;
+
+    // Publish resampled audio as new source to audio engine
+    audioEngine.setSourceSample(entry->buffer, entry->sampleRate);
+
+    // Update MIDI root note if detected
+    if (entry->rootNote.midiNote >= 0)
+        audioEngine.getMidiManager().setSourceRootNote(entry->rootNote.midiNote);
+
+    // Update waveform display
+    waveformView.setSource(entry->buffer, entry->sampleRate);
+    waveformView.setLoopRegion(0, entry->buffer->getNumSamples());
+
+    // Update root note label
+    rootNoteLabel.setText(entry->rootNote.getNoteName(), juce::dontSendNotification);
+
+    // Update sample info
+    juce::String info = "Resample #" + juce::String(entry->id)
+        + " | " + juce::String(entry->getLengthSeconds(), 2) + "s"
+        + " | 2ch"
+        + " | " + juce::String(static_cast<int>(entry->sampleRate)) + " Hz";
+    sampleInfoLabel.setText(info, juce::dontSendNotification);
 }
 
 } // namespace grainhex
