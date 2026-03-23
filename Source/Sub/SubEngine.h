@@ -3,6 +3,7 @@
 #include "Sub/SubOscillator.h"
 #include "Sub/BiquadFilter.h"
 #include "Sub/PitchDetector.h"
+#include "Audio/AudioTypes.h"
 #include "Audio/ParameterSmoother.h"
 #include <atomic>
 #include <array>
@@ -10,7 +11,8 @@
 namespace grainhex {
 
 /**
- * SubEngine owns the sub oscillator, crossover filters, level control, and rendering.
+ * SubEngine owns the sub oscillator, crossover filters, pitch detection,
+ * tuning logic, level control, and rendering.
  * Designed for audio-thread use — no allocation in processBlock.
  */
 class SubEngine
@@ -42,6 +44,14 @@ public:
     void setGranularHPFreq(float hz);
     void setSubLPFreq(float hz);
 
+    // Tuning mode
+    void setTuningMode(SubTuningMode mode) { tuningMode.store(static_cast<int>(mode), std::memory_order_relaxed); }
+    void setPitchSnapMode(PitchSnapMode mode) { pitchSnapMode.store(static_cast<int>(mode), std::memory_order_relaxed); }
+    void setSmoothingSpeed(SmoothingSpeed speed);
+    void setOctaveOffset(int offset) { octaveOffset.store(offset, std::memory_order_relaxed); }
+    void setManualNote(int midiNote) { manualMidiNote.store(midiNote, std::memory_order_relaxed); }
+
+    SubTuningMode getTuningMode() const { return static_cast<SubTuningMode>(tuningMode.load(std::memory_order_relaxed)); }
     bool isEnabled() const { return subEnabled.load(std::memory_order_relaxed); }
 
     // Feed granular output to pitch detector (call before sub mix)
@@ -54,6 +64,8 @@ public:
 
 private:
     void updateFilterCoefficients();
+    void updateSubFrequencyFromPitch();
+    static float midiNoteToFrequency(int midiNote);
 
     SubOscillator oscillator;
 
@@ -64,17 +76,22 @@ private:
     ParameterSmoother frequencySmoother;
 
     // Crossover filters
-    BiquadFilter granularHPL; // HP for left granular channel
-    BiquadFilter granularHPR; // HP for right granular channel
-    BiquadFilter subLP;       // LP for sub output (mono)
+    BiquadFilter granularHPL;
+    BiquadFilter granularHPR;
+    BiquadFilter subLP;
 
     std::atomic<float> granularHPFreq { kDefaultGranularHP };
     std::atomic<float> subLPFreq { kDefaultSubLP };
     bool filtersNeedUpdate = true;
 
+    // Tuning
+    std::atomic<int> tuningMode { static_cast<int>(SubTuningMode::Auto) };
+    std::atomic<int> pitchSnapMode { static_cast<int>(PitchSnapMode::Strict) };
+    std::atomic<int> octaveOffset { -1 }; // Default: one octave below detected pitch
+    std::atomic<int> manualMidiNote { 36 }; // C2 default for manual mode
+
     // Pitch detection
     PitchDetector pitchDetector;
-    // Atomic snapshot for UI thread to read
     std::atomic<float> detectedFrequency { 0.0f };
     std::atomic<float> detectedConfidence { 0.0f };
     std::atomic<int> detectedMidiNote { -1 };

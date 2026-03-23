@@ -1,4 +1,5 @@
 #include "Sub/SubEngine.h"
+#include <cmath>
 
 namespace grainhex {
 
@@ -23,6 +24,23 @@ void SubEngine::setSampleRate(double sampleRate)
     updateFilterCoefficients();
 
     pitchDetector.setSampleRate(sampleRate);
+}
+
+void SubEngine::setSmoothingSpeed(SmoothingSpeed speed)
+{
+    float timeSeconds = 0.05f; // Medium default
+    switch (speed)
+    {
+        case SmoothingSpeed::Slow:   timeSeconds = 0.1f;  break;
+        case SmoothingSpeed::Medium: timeSeconds = 0.05f; break;
+        case SmoothingSpeed::Fast:   timeSeconds = 0.01f; break;
+    }
+    frequencySmoother.setSmoothingTime(timeSeconds, currentSampleRate);
+}
+
+float SubEngine::midiNoteToFrequency(int midiNote)
+{
+    return 440.0f * std::pow(2.0f, (static_cast<float>(midiNote) - 69.0f) / 12.0f);
 }
 
 void SubEngine::setGranularHPFreq(float hz)
@@ -52,6 +70,47 @@ void SubEngine::updateFilterCoefficients()
     filtersNeedUpdate = false;
 }
 
+void SubEngine::updateSubFrequencyFromPitch()
+{
+    auto mode = static_cast<SubTuningMode>(tuningMode.load(std::memory_order_relaxed));
+
+    if (mode == SubTuningMode::Manual)
+    {
+        int note = manualMidiNote.load(std::memory_order_relaxed);
+        int offset = octaveOffset.load(std::memory_order_relaxed);
+        int targetNote = note + (offset * 12);
+        targetNote = std::max(0, std::min(127, targetNote));
+        frequencySmoother.setTargetValue(midiNoteToFrequency(targetNote));
+        return;
+    }
+
+    // Auto mode: derive frequency from detected pitch
+    PitchInfo pitch = pitchDetector.getLastStablePitch();
+    if (pitch.frequency <= 0.0f || pitch.midiNote < 0)
+        return; // No valid pitch yet, keep current frequency
+
+    int offset = octaveOffset.load(std::memory_order_relaxed);
+    auto snapMode = static_cast<PitchSnapMode>(pitchSnapMode.load(std::memory_order_relaxed));
+
+    float targetFreq;
+    if (snapMode == PitchSnapMode::Strict)
+    {
+        // Snap to nearest semitone, then apply octave offset
+        int targetNote = pitch.midiNote + (offset * 12);
+        targetNote = std::max(0, std::min(127, targetNote));
+        targetFreq = midiNoteToFrequency(targetNote);
+    }
+    else
+    {
+        // Loose: follow exact frequency with octave offset
+        targetFreq = pitch.frequency * std::pow(2.0f, static_cast<float>(offset));
+    }
+
+    // Clamp to audible sub range
+    targetFreq = std::max(16.0f, std::min(250.0f, targetFreq));
+    frequencySmoother.setTargetValue(targetFreq);
+}
+
 void SubEngine::applyGranularHP(float* left, float* right, int numSamples)
 {
     if (!subEnabled.load(std::memory_order_relaxed))
@@ -73,6 +132,9 @@ void SubEngine::processBlock(float* outL, float* outR, int numSamples)
         return;
 
     updateFilterCoefficients();
+
+    // Update sub frequency from pitch detection / manual selection
+    updateSubFrequencyFromPitch();
 
     // Update waveform if changed
     oscillator.setWaveform(static_cast<SubWaveform>(waveform.load(std::memory_order_relaxed)));
