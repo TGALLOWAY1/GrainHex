@@ -104,14 +104,14 @@ Use dedicated workers for:
 - resample rendering / WAV encoding
 - optional offline analysis steps
 
-## 1.4 Suggested Folder Structure
+## 1.4 Folder Structure (Current)
 
 ```text
 Source/
   App/
     Main.cpp
-    Application.cpp
-    MainWindow.cpp
+    Application.h/.cpp
+    MainWindow.h/.cpp
   Audio/
     AudioEngine.h/.cpp
     AudioTypes.h
@@ -128,29 +128,32 @@ Source/
     WindowFunctions.h/.cpp
   Sub/
     SubEngine.h/.cpp
+    SubOscillator.h
     PitchDetector.h/.cpp
-    Oscillator.h/.cpp
+    BiquadFilter.h
   FX/
-    DistortionProcessor.h/.cpp
-    FilterProcessor.h/.cpp
+    DistortionProcessor.h
+    FilterProcessor.h
+    EffectsChain.h
   Modulation/
-    Lfo.h/.cpp
-    Envelope.h/.cpp
-    ModulationRouter.h/.cpp
+    LFO.h
+    ADSREnvelope.h
+    ModulationEngine.h
+  MIDI/
+    MidiManager.h
   Resample/
     ResampleEngine.h/.cpp
-    WavExporter.h/.cpp
-    HistoryManager.h/.cpp
+    WavExporter.h
   UI/
     MainEditor.h/.cpp
     WaveformView.h/.cpp
     GranularPanel.h/.cpp
     SubPanel.h/.cpp
     EffectsPanel.h/.cpp
+    ModulationPanel.h/.cpp
     ResamplePanel.h/.cpp
-    FooterPanel.h/.cpp
   Tests/
-    ...
+    RootNoteDetectorTests.cpp
 ```
 
 ---
@@ -960,54 +963,58 @@ At the end of every week, run:
 
 # 9. Suggested Milestone-by-Milestone Build Sequence
 
-## Milestone 1
+## Milestone 1 — COMPLETE (v0.1.0)
 Foundation working:
-- app shell
-- audio I/O
-- sample load
-- waveform
-- playback
-- looping
-- root note detection
+- [x] app shell
+- [x] audio I/O
+- [x] sample load
+- [x] waveform
+- [x] playback
+- [x] looping
+- [x] root note detection
 
-## Milestone 2
+## Milestone 2 — COMPLETE (v0.2.0)
 Granular engine complete:
-- all 9 controls
-- stable scheduler
-- grain visualization
-- high grain count optimization
-- bass-material validation
+- [x] all 9 controls
+- [x] stable scheduler
+- [x] grain visualization
+- [x] high grain count optimization (128+ grains)
+- [x] bass-material validation
 
-## Milestone 3
+## Milestone 3 — COMPLETE (v0.3.0)
 Sub tuner complete:
-- sub oscillator
-- auto/manual tuning
-- pitch detector
-- display
-- crossover isolation
+- [x] sub oscillator (sine + triangle)
+- [x] auto/manual tuning
+- [x] YIN pitch detector
+- [x] pitch display
+- [x] HP/LP crossover isolation
 
-## Milestone 4
+## Milestone 4 — COMPLETE (v0.4.0)
 Shaping and control:
-- distortion
-- filter
-- LFO
-- ADSR
+- [x] distortion (soft clip, hard clip, wavefold)
+- [x] multi-mode filter (LP/HP/BP)
+- [x] LFO (sine, triangle, square, S&H)
+- [x] ADSR envelope
+- [x] MIDI note input with pitch mapping
+- [x] Modulation assignment UX
 
-## Milestone 5
+## Milestone 5 — COMPLETE (v0.5.0)
 Workflow differentiator complete:
-- resample capture
-- reload
-- history
-- undo
-- WAV export
-- drag-and-drop
+- [x] resample capture (configurable 0.5–30s length)
+- [x] reload as source with root note re-detection
+- [x] linear history (up to 8 entries with mini waveform thumbnails)
+- [x] single-step undo and revert-to-any-entry
+- [x] WAV export (16-bit, 24-bit, 32-float)
+- [ ] drag-and-drop out (temp file infrastructure ready, needs cross-app testing)
 
-## Milestone 6
+## Milestone 6 — NEXT
 Ship pass:
-- polished final layout
-- factory content
-- testing
-- packaging
+- [ ] polished final layout (PRD spec: top/center/bottom-left/bottom-right/sidebar/footer)
+- [ ] factory content (15–20 samples: reeses, growls, FM basses, noise, vocal chops)
+- [ ] internal browser with preview + load
+- [ ] dark theme visual polish and consistent typography
+- [ ] release testing (multi-platform, stress, regression)
+- [ ] packaging (macOS DMG, Windows installer)
 
 ---
 
