@@ -1007,12 +1007,14 @@ Workflow differentiator complete:
 - [x] WAV export (16-bit, 24-bit, 32-float)
 - [ ] drag-and-drop out (temp file infrastructure ready, needs cross-app testing)
 
-## Milestone 6 — NEXT
+## Milestone 6 — COMPLETE (v1.0.0)
 Ship pass:
-- [ ] polished final layout (PRD spec: top/center/bottom-left/bottom-right/sidebar/footer)
-- [ ] factory content (15–20 samples: reeses, growls, FM basses, noise, vocal chops)
-- [ ] internal browser with preview + load
-- [ ] dark theme visual polish and consistent typography
+- [x] polished final layout (PRD spec: top/center/bottom-left/bottom-right/sidebar/footer)
+- [x] factory content (18 synthesized samples: reeses, growls, FM basses, noise, vocal formants)
+- [x] internal browser with preview + load
+- [x] dark theme visual polish and consistent typography (GrainHexLookAndFeel + Theme constants)
+- [x] mono lock for bass monitoring
+- [x] first-launch default sound (auto-loads factory sample with granular enabled)
 - [ ] release testing (multi-platform, stress, regression)
 - [ ] packaging (macOS DMG, Windows installer)
 

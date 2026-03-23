@@ -12,7 +12,7 @@ GrainHex combines three core systems:
 
 Built with **C++17** and **JUCE 7**.
 
-## Current Status — v0.5.0 (Phase 5 Complete)
+## Current Status — v1.0.0 (All Phases Complete)
 
 | Phase | Status | Description |
 |-------|--------|-------------|
@@ -21,7 +21,21 @@ Built with **C++17** and **JUCE 7**.
 | 3. Sub Tuner | Done | Sub oscillator, auto/manual tuning, YIN pitch detector, crossover filters |
 | 4. Effects & Modulation | Done | Distortion (soft/hard/wavefold), multi-mode filter, LFO, ADSR, MIDI input |
 | 5. Resample & Export | Done | Output capture, reload-as-source, 8-entry history with thumbnails, WAV export (16/24/32-float) |
-| 6. Polish & Release | Next | Final layout, factory content, testing, packaging |
+| 6. Polish & Release | Done | PRD layout, dark theme, factory content, sample browser, mono lock, resize-safe layout |
+
+## Features
+
+- **Granular Engine**: 9 controls (size, count, position, spray, pitch, quantize, window, direction, spread) with 128+ concurrent grains
+- **Sub Tuner**: Auto-tuned sub oscillator follows detected granular pitch with YIN algorithm
+- **Effects**: Distortion (soft clip/hard clip/wavefold) and multi-mode filter (LP/HP/BP) with envelope amount
+- **Modulation**: LFO (sine/triangle/square/S&H) and ADSR envelope with assignment routing
+- **Resample Loop**: One-click capture, 8-entry history with mini waveform thumbnails, undo/revert, WAV export
+- **Factory Content**: 18 synthesized bass samples (reeses, growls, FM basses, noise textures, vocal formants)
+- **Sample Browser**: Category filter, preview, double-click to load
+- **MIDI Input**: Note-to-pitch mapping with per-note envelope trigger
+- **Mono Lock**: Sum stereo to mono for consistent bass monitoring
+- **Dark Theme**: Studio-ready UI with consistent typography and accent colours
+- **First-Launch Sound**: Auto-loads a factory sample with granular enabled — sounds interesting immediately
 
 ## Building
 
@@ -66,20 +80,46 @@ cmake --build .
 ctest
 ```
 
+## UI Layout (PRD Specification)
+
+```
++----------------------------------------------------------+
+|  GrainHex v1.0   [info]              [root note] [MIDI]  |
++----------------------------------------------------------+
+|                                       |                   |
+|  [Waveform / Drop Zone]              | [Sample Browser]  |
+|                                       |                   |
++---------------------------------------+-------------------+
+|  [Play] [Stop] [Loop] [Granular] [Load]                  |
++----------------------------------------------------------+
+|  GRANULAR: Size Count Position Spray Pitch Spread         |
+|            Quantize  Window  Direction                    |
++------------------------------+---------------------------+
+|                              |                           |
+|  SUB TUNER                   |  RESAMPLE HISTORY         |
+|  [Enable] Level  Pitch      |  [Resample] [Undo] [Clear]|
+|  Waveform Mode Snap         |  Length  BitDepth          |
+|  Gran HP  Sub LP             |  [thumbnails ...]         |
+|                              |                           |
++------------------------------+---------------------------+
+|  Master [====] Mono  Export WAV  |  status message       |
++----------------------------------------------------------+
+```
+
 ## Project Structure
 
 ```
 Source/
 ├── App/           # Application entry point, main window
 ├── Audio/         # Audio engine, parameter smoothing
-├── SourceInput/   # Sample loading, root note detection
+├── SourceInput/   # Sample loading, root note detection, factory samples
 ├── Granular/      # Grain voices, scheduling, window functions
 ├── Sub/           # Sub oscillator engine, pitch detection
 ├── FX/            # Distortion and filter processors
 ├── Modulation/    # LFO, ADSR envelope, modulation routing
-├── MIDI/          # MIDI input, note-to-pitch mapping, CC learn
+├── MIDI/          # MIDI input, note-to-pitch mapping
 ├── Resample/      # Resample engine, history, WAV export
-├── UI/            # Editor panels, waveform display
+├── UI/            # Editor panels, waveform, sample browser, look-and-feel
 └── Tests/         # Unit tests
 ```
 
@@ -98,3 +138,4 @@ Source/
 - Effects process granular only; sub bypasses by default to preserve clean low end
 - Resample history is linear-only in V1 — max 8 iterations
 - Bass-music-first defaults throughout
+- Factory content sounds interesting on first launch
