@@ -48,6 +48,7 @@ target_sources(GrainHex PRIVATE
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
+    Source/UI/GranularPanel.cpp
 )
 
 target_include_directories(GrainHex PRIVATE

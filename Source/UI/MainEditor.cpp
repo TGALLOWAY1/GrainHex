@@ -66,6 +66,22 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
         audioEngine.setLoopEnabled(loopButton.getToggleState());
     };
 
+    // Granular toggle
+    addAndMakeVisible(granularToggle);
+    granularToggle.setToggleState(false, juce::dontSendNotification);
+    granularToggle.onClick = [this]
+    {
+        bool enabled = granularToggle.getToggleState();
+        audioEngine.setGranularEnabled(enabled);
+        granularPanel.setVisible(enabled);
+        resized();
+    };
+
+    // Granular panel
+    addAndMakeVisible(granularPanel);
+    granularPanel.setVisible(false);
+    granularPanel.onParameterChanged = [this] { pushGranularParams(); };
+
     // Volume
     addAndMakeVisible(volumeSlider);
     volumeSlider.setRange(0.0, 1.0, 0.01);
@@ -94,7 +110,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
 
     updateStatusLabel("Drop a WAV, AIFF, or FLAC file to begin");
 
-    setSize(900, 500);
+    setSize(900, 700);
 }
 
 void MainEditor::paint(juce::Graphics& g)
@@ -108,7 +124,7 @@ void MainEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
-    g.drawText("v0.1 — Phase 1", 160, 14, 120, 20, juce::Justification::centredLeft);
+    g.drawText("v0.2 — Phase 2", 160, 14, 120, 20, juce::Justification::centredLeft);
 
     // Update playhead
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
@@ -138,6 +154,8 @@ void MainEditor::resized()
     stopButton.setBounds(controlRow.removeFromLeft(70));
     controlRow.removeFromLeft(5);
     loopButton.setBounds(controlRow.removeFromLeft(70));
+    controlRow.removeFromLeft(5);
+    granularToggle.setBounds(controlRow.removeFromLeft(90));
     controlRow.removeFromLeft(10);
     sineTestButton.setBounds(controlRow.removeFromLeft(90));
     controlRow.removeFromLeft(10);
@@ -148,6 +166,13 @@ void MainEditor::resized()
     volumeSlider.setBounds(controlRow.removeFromLeft(120));
 
     area.removeFromTop(8);
+
+    // Granular panel (visible when enabled)
+    if (granularPanel.isVisible())
+    {
+        granularPanel.setBounds(area.removeFromTop(170));
+        area.removeFromTop(8);
+    }
 
     // Sample info row
     auto infoRow = area.removeFromTop(24);
@@ -216,6 +241,20 @@ void MainEditor::loadFile(const juce::File& file)
 void MainEditor::updateStatusLabel(const juce::String& text)
 {
     statusLabel.setText(text, juce::dontSendNotification);
+}
+
+void MainEditor::pushGranularParams()
+{
+    auto& ge = audioEngine.getGranularEngine();
+    ge.setGrainSize(granularPanel.getGrainSize());
+    ge.setGrainCount(granularPanel.getGrainCount());
+    ge.setPosition(granularPanel.getPosition());
+    ge.setSpray(granularPanel.getSpray());
+    ge.setPitchSemitones(granularPanel.getPitchSemitones());
+    ge.setPitchQuantize(granularPanel.getPitchQuantize());
+    ge.setWindowShape(granularPanel.getWindowShape());
+    ge.setDirection(granularPanel.getDirection());
+    ge.setSpread(granularPanel.getSpread());
 }
 
 } // namespace grainhex
