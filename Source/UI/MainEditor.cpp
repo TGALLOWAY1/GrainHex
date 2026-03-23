@@ -303,12 +303,9 @@ void MainEditor::resized()
     {
         int availableHeight = sidebarArea.getHeight();
         int effectsHeight = effectsPanel.isVisible() ? (availableHeight / 2 - 3) : 0;
-        int modHeight = modulationPanel.isVisible() ? (availableHeight / 2 - 3) : 0;
 
         if (effectsPanel.isVisible() && !modulationPanel.isVisible())
             effectsHeight = availableHeight;
-        if (!effectsPanel.isVisible() && modulationPanel.isVisible())
-            modHeight = availableHeight;
 
         if (effectsPanel.isVisible())
         {

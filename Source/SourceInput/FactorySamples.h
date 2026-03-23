@@ -163,22 +163,21 @@ public:
 
         // === ADDITIONAL BASSES ===
         samples.push_back(makeSample("808 Sub", "Reeses", 36, sr, 3.0,
-            [](double phase, double t, double freq) {
-                double sine = std::sin(2.0 * pi() * phase);
+            [](double phase, double t, double /*freq*/) {
                 double pitchEnv = std::exp(-t * 8.0) * 0.5 + 1.0;
                 double pitched = std::sin(2.0 * pi() * phase * pitchEnv);
                 return pitched * 0.5 * envelope808(t, 3.0);
             }));
 
         samples.push_back(makeSample("Square Bass", "FM Basses", 36, sr, 2.0,
-            [](double phase, double t, double freq) {
+            [](double phase, double t, double /*freq*/) {
                 double sq = (std::fmod(phase, 1.0) < 0.5) ? 1.0 : -1.0;
                 double sq2 = (std::fmod(phase * 2.0, 1.0) < 0.5) ? 1.0 : -1.0;
                 return (sq * 0.4 + sq2 * 0.15) * envelope(t, 2.0);
             }));
 
         samples.push_back(makeSample("Distorted Sub", "Growls", 36, sr, 2.0,
-            [](double phase, double t, double freq) {
+            [](double phase, double t, double /*freq*/) {
                 double sine = std::sin(2.0 * pi() * phase);
                 double dist = std::tanh(sine * 4.0);
                 return dist * 0.35 * envelope(t, 2.0);
