@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Granular/GrainScheduler.h"
 #include "Granular/WindowFunctions.h"
+#include "UI/GrainHexLookAndFeel.h"
 #include <functional>
 
 namespace grainhex {

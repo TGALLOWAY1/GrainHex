@@ -80,17 +80,20 @@ void WaveformView::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Background
-    g.setColour(juce::Colour(0xff1a1a2e));
-    g.fillRect(bounds);
+    // Background with rounded corners
+    g.setColour(juce::Colour(Theme::bgControl));
+    g.fillRoundedRectangle(bounds, Theme::cornerRadius);
 
     if (peaks.empty() || totalSamples == 0)
     {
         // Empty state
-        g.setColour(juce::Colours::grey);
-        g.setFont(16.0f);
-        g.drawText("Drop a sample here (WAV / AIFF / FLAC)",
+        g.setColour(juce::Colour(Theme::textDim));
+        g.setFont(14.0f);
+        g.drawText("Drop a sample here or pick one from the browser",
                     bounds, juce::Justification::centred);
+
+        g.setColour(juce::Colour(Theme::border));
+        g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
         return;
     }
 
@@ -103,17 +106,17 @@ void WaveformView::paint(juce::Graphics& g)
         float loopStartX = normalizedToX(static_cast<float>(loopStartSample) / static_cast<float>(totalSamples));
         float loopEndX = normalizedToX(static_cast<float>(loopEndSample) / static_cast<float>(totalSamples));
 
-        g.setColour(juce::Colour(0x2000ccff));
+        g.setColour(juce::Colour(Theme::accentCyan).withAlpha(0.12f));
         g.fillRect(loopStartX, bounds.getY(), loopEndX - loopStartX, bounds.getHeight());
 
         // Loop markers
-        g.setColour(juce::Colour(0xff00ccff));
+        g.setColour(juce::Colour(Theme::accentCyan));
         g.fillRect(loopStartX, bounds.getY(), 2.0f, bounds.getHeight());
         g.fillRect(loopEndX - 2.0f, bounds.getY(), 2.0f, bounds.getHeight());
     }
 
     // Waveform
-    g.setColour(juce::Colour(0xff16c784));
+    g.setColour(juce::Colour(Theme::accentGreen));
     int numPeaks = static_cast<int>(peaks.size());
     for (int i = 0; i < numPeaks; ++i)
     {
@@ -126,7 +129,7 @@ void WaveformView::paint(juce::Graphics& g)
     // Grain position markers
     if (!grainPositions.empty())
     {
-        g.setColour(juce::Colour(0x9016c784)); // Semi-transparent green
+        g.setColour(juce::Colour(Theme::accentGreen).withAlpha(0.55f));
         for (float pos : grainPositions)
         {
             float gx = normalizedToX(pos);
@@ -139,13 +142,13 @@ void WaveformView::paint(juce::Graphics& g)
     {
         float norm = static_cast<float>(playheadSample) / static_cast<float>(totalSamples);
         float playX = normalizedToX(norm);
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colour(Theme::textBright));
         g.fillRect(playX, bounds.getY(), 2.0f, bounds.getHeight());
     }
 
     // Border
-    g.setColour(juce::Colour(0xff333355));
-    g.drawRect(bounds, 1.0f);
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
 }
 
 void WaveformView::resized()

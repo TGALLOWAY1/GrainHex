@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "FX/DistortionProcessor.h"
 #include "FX/FilterProcessor.h"
+#include "UI/GrainHexLookAndFeel.h"
 #include <functional>
 
 namespace grainhex {

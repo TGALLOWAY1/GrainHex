@@ -87,6 +87,19 @@ void AudioEngine::audioDeviceIOCallbackWithContext(
     {
         renderSamplePlayback(outputChannelData, numOutputChannels, numSamples);
     }
+
+    // Mono lock: sum stereo to mono for consistent bass monitoring
+    if (monoLocked.load(std::memory_order_relaxed) && numOutputChannels >= 2)
+    {
+        float* outL = outputChannelData[0];
+        float* outR = outputChannelData[1];
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float mono = (outL[i] + outR[i]) * 0.5f;
+            outL[i] = mono;
+            outR[i] = mono;
+        }
+    }
 }
 
 void AudioEngine::renderSineTest(float* const* outputChannelData, int numOutputChannels, int numSamples)
@@ -325,6 +338,16 @@ bool AudioEngine::isSineTestEnabled() const
 void AudioEngine::setMasterVolume(float volume)
 {
     volumeSmoother.setTargetValue(juce::jlimit(0.0f, 1.0f, volume));
+}
+
+void AudioEngine::setMonoLock(bool enabled)
+{
+    monoLocked.store(enabled, std::memory_order_relaxed);
+}
+
+bool AudioEngine::isMonoLocked() const
+{
+    return monoLocked.load(std::memory_order_relaxed);
 }
 
 } // namespace grainhex

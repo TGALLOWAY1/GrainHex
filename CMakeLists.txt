@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(GrainHex VERSION 0.5.0 LANGUAGES CXX)
+project(GrainHex VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -21,7 +21,7 @@ FetchContent_MakeAvailable(JUCE)
 # GrainHex standalone app
 juce_add_gui_app(GrainHex
     PRODUCT_NAME "GrainHex"
-    VERSION "0.5.0"
+    VERSION "1.0.0"
     COMPANY_NAME "GrainHex"
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE

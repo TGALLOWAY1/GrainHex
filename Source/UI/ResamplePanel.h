@@ -4,6 +4,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "Resample/ResampleEngine.h"
 #include "Resample/WavExporter.h"
+#include "UI/GrainHexLookAndFeel.h"
 #include <functional>
 
 namespace grainhex {

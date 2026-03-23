@@ -56,17 +56,20 @@ EffectsPanel::EffectsPanel()
 
 void EffectsPanel::paint(juce::Graphics& g)
 {
-    g.setColour(juce::Colour(0xff1a1a2e));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(juce::Colour(Theme::bgPanel));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), Theme::cornerRadius);
 
-    g.setColour(juce::Colour(0xff16c784));
-    g.setFont(juce::Font(14.0f).boldened());
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
+
+    g.setColour(juce::Colour(Theme::accentOrange));
+    g.setFont(juce::Font(Theme::fontSectionHead).boldened());
     g.drawText("EFFECTS", 10, 4, 100, 20, juce::Justification::centredLeft);
 
     // Separator between distortion and filter
-    int midX = getWidth() / 2;
-    g.setColour(juce::Colour(0xff333355));
-    g.drawVerticalLine(midX, 24.0f, static_cast<float>(getHeight() - 8));
+    int midY = getHeight() / 2 + 8;
+    g.setColour(juce::Colour(Theme::border));
+    g.drawHorizontalLine(midY, 8.0f, static_cast<float>(getWidth() - 8));
 }
 
 void EffectsPanel::resized()
@@ -74,20 +77,19 @@ void EffectsPanel::resized()
     auto area = getLocalBounds().reduced(8);
     area.removeFromTop(22); // Title
 
-    int halfWidth = area.getWidth() / 2;
+    int halfHeight = area.getHeight() / 2 - 2;
 
-    // Distortion half (left)
-    auto distArea = area.removeFromLeft(halfWidth).reduced(4);
+    // Distortion section (top)
+    auto distArea = area.removeFromTop(halfHeight).reduced(2);
     {
         auto topRow = distArea.removeFromTop(24);
-        distortionToggle.setBounds(topRow.removeFromLeft(100));
-        distortionModeLabel.setBounds(topRow.removeFromLeft(40));
-        distortionModeBox.setBounds(topRow.removeFromLeft(100));
+        distortionToggle.setBounds(topRow.removeFromLeft(90));
+        distortionModeLabel.setBounds(topRow.removeFromLeft(35));
+        distortionModeBox.setBounds(topRow);
 
         distArea.removeFromTop(4);
         auto knobRow = distArea;
         int knobW = knobRow.getWidth() / 2;
-        int knobH = knobRow.getHeight();
 
         auto driveArea = knobRow.removeFromLeft(knobW);
         driveLabel.setBounds(driveArea.removeFromTop(16));
@@ -98,18 +100,19 @@ void EffectsPanel::resized()
         distMixSlider.setBounds(mixArea);
     }
 
-    // Filter half (right)
-    auto filtArea = area.reduced(4);
+    area.removeFromTop(4);
+
+    // Filter section (bottom)
+    auto filtArea = area.reduced(2);
     {
         auto topRow = filtArea.removeFromTop(24);
-        filterToggle.setBounds(topRow.removeFromLeft(70));
-        filterModeLabel.setBounds(topRow.removeFromLeft(35));
-        filterModeBox.setBounds(topRow.removeFromLeft(100));
+        filterToggle.setBounds(topRow.removeFromLeft(60));
+        filterModeLabel.setBounds(topRow.removeFromLeft(30));
+        filterModeBox.setBounds(topRow);
 
         filtArea.removeFromTop(4);
         auto knobRow = filtArea;
         int knobW = knobRow.getWidth() / 3;
-        int knobH = knobRow.getHeight();
 
         auto cutArea = knobRow.removeFromLeft(knobW);
         cutoffLabel.setBounds(cutArea.removeFromTop(16));

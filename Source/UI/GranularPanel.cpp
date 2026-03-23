@@ -8,24 +8,24 @@ static void styleRotarySlider(juce::Slider& slider, double min, double max, doub
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 16);
     slider.setRange(min, max, interval);
     slider.setValue(defaultVal, juce::dontSendNotification);
-    slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xff16c784));
-    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff333355));
-    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::lightgrey);
+    slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(Theme::accentGreen));
+    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(Theme::border));
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(Theme::textNormal));
     slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
 }
 
 static void styleLabel(juce::Label& label)
 {
     label.setJustificationType(juce::Justification::centred);
-    label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    label.setFont(juce::Font(11.0f));
+    label.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
+    label.setFont(juce::Font(Theme::fontLabel));
 }
 
 static void styleComboBox(juce::ComboBox& box)
 {
-    box.setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1a1a2e));
-    box.setColour(juce::ComboBox::textColourId, juce::Colours::lightgrey);
-    box.setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff333355));
+    box.setColour(juce::ComboBox::backgroundColourId, juce::Colour(Theme::bgControl));
+    box.setColour(juce::ComboBox::textColourId, juce::Colour(Theme::textNormal));
+    box.setColour(juce::ComboBox::outlineColourId, juce::Colour(Theme::border));
 }
 
 GranularPanel::GranularPanel()
@@ -103,14 +103,14 @@ GranularPanel::GranularPanel()
 
 void GranularPanel::paint(juce::Graphics& g)
 {
-    g.setColour(juce::Colour(0xff12122a));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(juce::Colour(Theme::bgPanel));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), Theme::cornerRadius);
 
-    g.setColour(juce::Colour(0xff333355));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+    g.setColour(juce::Colour(Theme::border));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
 
-    g.setColour(juce::Colour(0xff16c784));
-    g.setFont(juce::Font(13.0f).boldened());
+    g.setColour(juce::Colour(Theme::accentGreen));
+    g.setFont(juce::Font(Theme::fontSectionHead).boldened());
     g.drawText("GRANULAR", 10, 4, 120, 20, juce::Justification::centredLeft);
 }
 
