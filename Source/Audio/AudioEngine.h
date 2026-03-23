@@ -64,6 +64,10 @@ public:
     // Volume
     void setMasterVolume(float volume);
 
+    // Mono lock — sums stereo to mono for consistent bass monitoring
+    void setMonoLock(bool enabled);
+    bool isMonoLocked() const;
+
     // Granular engine
     void setGranularEnabled(bool enabled);
     bool isGranularEnabled() const;
@@ -136,6 +140,9 @@ private:
 
     // Master volume
     ParameterSmoother volumeSmoother;
+
+    // Mono lock
+    std::atomic<bool> monoLocked { false };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioEngine)
 };
