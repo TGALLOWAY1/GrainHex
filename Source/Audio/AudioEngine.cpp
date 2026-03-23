@@ -174,6 +174,9 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
 
     granularEngine.processBlock(outL, outR, numSamples, deviceSampleRate);
 
+    // Apply HP filter to granular output (removes low end before sub mix)
+    subEngine.applyGranularHP(outL, outR, numSamples);
+
     // Render sub oscillator (additive mix with granular output)
     subEngine.processBlock(outL, outR, numSamples);
 

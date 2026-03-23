@@ -14,12 +14,63 @@ void SubEngine::setSampleRate(double sampleRate)
     oscillator.setSampleRate(sampleRate);
     levelSmoother.setSmoothingTime(0.01f, sampleRate);
     frequencySmoother.setSmoothingTime(0.05f, sampleRate);
+
+    // Reset filter state and recompute coefficients
+    granularHPL.reset();
+    granularHPR.reset();
+    subLP.reset();
+    filtersNeedUpdate = true;
+    updateFilterCoefficients();
+}
+
+void SubEngine::setGranularHPFreq(float hz)
+{
+    granularHPFreq.store(hz, std::memory_order_relaxed);
+    filtersNeedUpdate = true;
+}
+
+void SubEngine::setSubLPFreq(float hz)
+{
+    subLPFreq.store(hz, std::memory_order_relaxed);
+    filtersNeedUpdate = true;
+}
+
+void SubEngine::updateFilterCoefficients()
+{
+    if (!filtersNeedUpdate)
+        return;
+
+    float hpFreq = granularHPFreq.load(std::memory_order_relaxed);
+    float lpFreq = subLPFreq.load(std::memory_order_relaxed);
+
+    granularHPL.setCoefficients(BiquadFilter::Type::HighPass, hpFreq, kFilterQ, currentSampleRate);
+    granularHPR.setCoefficients(BiquadFilter::Type::HighPass, hpFreq, kFilterQ, currentSampleRate);
+    subLP.setCoefficients(BiquadFilter::Type::LowPass, lpFreq, kFilterQ, currentSampleRate);
+
+    filtersNeedUpdate = false;
+}
+
+void SubEngine::applyGranularHP(float* left, float* right, int numSamples)
+{
+    if (!subEnabled.load(std::memory_order_relaxed))
+        return;
+
+    updateFilterCoefficients();
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        left[i] = granularHPL.processSample(left[i]);
+        if (right != left)
+            right[i] = granularHPR.processSample(right[i]);
+    }
 }
 
 void SubEngine::processBlock(float* outL, float* outR, int numSamples)
 {
     if (!subEnabled.load(std::memory_order_relaxed))
         return;
+
+    updateFilterCoefficients();
 
     // Update waveform if changed
     oscillator.setWaveform(static_cast<SubWaveform>(waveform.load(std::memory_order_relaxed)));
@@ -32,6 +83,9 @@ void SubEngine::processBlock(float* outL, float* outR, int numSamples)
 
         float level = levelSmoother.getNextValue();
         float sample = oscillator.getNextSample() * level;
+
+        // Apply LP filter to sub output
+        sample = subLP.processSample(sample);
 
         // Sub is mono — add equally to both channels
         outL[i] += sample;
