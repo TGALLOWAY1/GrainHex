@@ -6,7 +6,6 @@
 #include <array>
 #include <atomic>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 namespace grainhex {
@@ -62,8 +61,8 @@ private:
     std::atomic<int> paramDirection { 0 };      // DirectionMode as int
     std::atomic<float> paramSpread { 0.0f };
 
-    // Mutex for grain position reads (lightweight, non-blocking try_lock from audio)
-    mutable std::mutex grainPositionMutex;
+    // Track highest active grain index to skip scanning empty tail
+    int highestActiveIndex = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GranularEngine)
 };

@@ -8,6 +8,9 @@ GranularEngine::GranularEngine()
     // All grains start inactive
     for (auto& grain : grainPool)
         grain.active = false;
+
+    // Force window table initialization at construction (not during audio callback)
+    WindowFunctions::getSample(WindowShape::Hann, 0.0f);
 }
 
 void GranularEngine::setSourceBuffer(std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate)
@@ -50,28 +53,34 @@ void GranularEngine::processBlock(float* outL, float* outR, int numSamples, doub
             auto params = scheduler.getSpawnParams(deviceSampleRate, sourceLength);
 
             // Find an inactive grain slot
-            for (auto& grain : grainPool)
+            for (int g = 0; g < MaxGrains; ++g)
             {
-                if (!grain.active)
+                if (!grainPool[static_cast<size_t>(g)].active)
                 {
-                    grain.start(params.sourcePosition,
-                                params.grainLengthSamples,
-                                params.playbackIncrement,
-                                params.panLeft,
-                                params.panRight,
-                                params.windowShape,
-                                params.reverse);
+                    grainPool[static_cast<size_t>(g)].start(
+                        params.sourcePosition,
+                        params.grainLengthSamples,
+                        params.playbackIncrement,
+                        params.panLeft,
+                        params.panRight,
+                        params.windowShape,
+                        params.reverse);
+
+                    // Update high-water mark
+                    if (g >= highestActiveIndex)
+                        highestActiveIndex = g + 1;
                     break;
                 }
             }
         }
 
-        // Render all active grains
+        // Render active grains (only scan up to highest active index)
         float sampleL = 0.0f;
         float sampleR = 0.0f;
 
-        for (auto& grain : grainPool)
+        for (int g = 0; g < highestActiveIndex; ++g)
         {
+            auto& grain = grainPool[static_cast<size_t>(g)];
             if (grain.active)
                 grain.renderSample(srcL, srcR, sourceLength, sampleL, sampleR);
         }
@@ -79,6 +88,10 @@ void GranularEngine::processBlock(float* outL, float* outR, int numSamples, doub
         outL[i] += sampleL;
         outR[i] += sampleR;
     }
+
+    // Shrink high-water mark at end of block
+    while (highestActiveIndex > 0 && !grainPool[static_cast<size_t>(highestActiveIndex - 1)].active)
+        --highestActiveIndex;
 }
 
 void GranularEngine::setGrainSize(float sizeMs) { paramGrainSize.store(sizeMs, std::memory_order_relaxed); }
@@ -103,11 +116,12 @@ std::vector<float> GranularEngine::getActiveGrainPositions() const
 
     float sourceLen = static_cast<float>(buffer->getNumSamples());
 
-    for (const auto& grain : grainPool)
+    int scanLimit = std::min(highestActiveIndex, MaxGrains);
+    for (int g = 0; g < scanLimit; ++g)
     {
-        if (grain.active)
+        if (grainPool[static_cast<size_t>(g)].active)
         {
-            float norm = static_cast<float>(grain.playbackCursor) / sourceLen;
+            float norm = static_cast<float>(grainPool[static_cast<size_t>(g)].playbackCursor) / sourceLen;
             positions.push_back(std::clamp(norm, 0.0f, 1.0f));
         }
     }
@@ -118,8 +132,9 @@ std::vector<float> GranularEngine::getActiveGrainPositions() const
 int GranularEngine::getActiveGrainCount() const
 {
     int count = 0;
-    for (const auto& grain : grainPool)
-        if (grain.active)
+    int scanLimit = std::min(highestActiveIndex, MaxGrains);
+    for (int g = 0; g < scanLimit; ++g)
+        if (grainPool[static_cast<size_t>(g)].active)
             ++count;
     return count;
 }
