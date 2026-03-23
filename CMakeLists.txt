@@ -47,6 +47,7 @@ target_sources(GrainHex PRIVATE
 
     # Sub
     Source/Sub/SubEngine.cpp
+    Source/Sub/PitchDetector.cpp
 
     # UI
     Source/UI/MainEditor.cpp
