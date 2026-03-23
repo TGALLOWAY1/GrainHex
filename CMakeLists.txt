@@ -43,6 +43,7 @@ target_sources(GrainHex PRIVATE
     Source/Granular/Interpolator.cpp
     Source/Granular/GrainVoice.cpp
     Source/Granular/GrainScheduler.cpp
+    Source/Granular/GranularEngine.cpp
 
     # UI
     Source/UI/MainEditor.cpp
