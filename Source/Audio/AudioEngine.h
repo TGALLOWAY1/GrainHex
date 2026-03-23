@@ -4,6 +4,7 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include "Audio/AudioTypes.h"
 #include "Audio/ParameterSmoother.h"
+#include "Granular/GranularEngine.h"
 #include <atomic>
 #include <memory>
 
@@ -59,11 +60,17 @@ public:
     // Volume
     void setMasterVolume(float volume);
 
+    // Granular engine
+    void setGranularEnabled(bool enabled);
+    bool isGranularEnabled() const;
+    GranularEngine& getGranularEngine() { return granularEngine; }
+
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
 private:
     void renderSineTest(float* const* outputChannelData, int numOutputChannels, int numSamples);
     void renderSamplePlayback(float* const* outputChannelData, int numOutputChannels, int numSamples);
+    void renderGranular(float* const* outputChannelData, int numOutputChannels, int numSamples);
 
     juce::AudioDeviceManager deviceManager;
 
@@ -85,6 +92,10 @@ private:
     std::atomic<bool> sineTestEnabled { false };
     double sinePhase = 0.0;
     static constexpr double sineFrequency = 440.0;
+
+    // Granular
+    GranularEngine granularEngine;
+    std::atomic<bool> granularEnabled { false };
 
     // Master volume
     ParameterSmoother volumeSmoother;

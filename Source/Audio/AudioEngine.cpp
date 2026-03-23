@@ -67,7 +67,11 @@ void AudioEngine::audioDeviceIOCallbackWithContext(
         return;
     }
 
-    if (transportState.load(std::memory_order_relaxed) == TransportState::Playing)
+    if (granularEnabled.load(std::memory_order_relaxed))
+    {
+        renderGranular(outputChannelData, numOutputChannels, numSamples);
+    }
+    else if (transportState.load(std::memory_order_relaxed) == TransportState::Playing)
     {
         renderSamplePlayback(outputChannelData, numOutputChannels, numSamples);
     }
@@ -154,10 +158,52 @@ void AudioEngine::renderSamplePlayback(float* const* outputChannelData, int numO
     playheadPosition.store(pos, std::memory_order_relaxed);
 }
 
+void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputChannels, int numSamples)
+{
+    // Use first two channels for stereo granular output
+    float* outL = (numOutputChannels >= 1) ? outputChannelData[0] : nullptr;
+    float* outR = (numOutputChannels >= 2) ? outputChannelData[1] : nullptr;
+
+    if (outL == nullptr)
+        return;
+
+    // If mono output, use same buffer for both
+    if (outR == nullptr)
+        outR = outL;
+
+    granularEngine.processBlock(outL, outR, numSamples, deviceSampleRate);
+
+    // Apply master volume
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float vol = volumeSmoother.getNextValue();
+        outL[i] *= vol;
+        if (outR != outL)
+            outR[i] *= vol;
+    }
+
+    // Copy to remaining channels
+    for (int ch = 2; ch < numOutputChannels; ++ch)
+        juce::FloatVectorOperations::copy(outputChannelData[ch], outL, numSamples);
+}
+
+void AudioEngine::setGranularEnabled(bool enabled)
+{
+    granularEnabled.store(enabled, std::memory_order_relaxed);
+}
+
+bool AudioEngine::isGranularEnabled() const
+{
+    return granularEnabled.load(std::memory_order_relaxed);
+}
+
 void AudioEngine::setSourceSample(std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate)
 {
     sourceSampleRate = sampleRate;
     std::atomic_store(&sourceBuffer, buffer);
+
+    // Forward to granular engine
+    granularEngine.setSourceBuffer(buffer, sampleRate);
 
     // Reset transport
     playheadPosition.store(0, std::memory_order_relaxed);

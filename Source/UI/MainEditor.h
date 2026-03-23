@@ -5,6 +5,7 @@
 #include "Audio/AudioEngine.h"
 #include "SourceInput/SourceSampleManager.h"
 #include "UI/WaveformView.h"
+#include "UI/GranularPanel.h"
 
 namespace grainhex {
 
@@ -34,14 +35,18 @@ private:
     AudioEngine& audioEngine;
     SourceSampleManager& sampleManager;
 
+    void pushGranularParams();
+
     // UI components
     WaveformView waveformView;
+    GranularPanel granularPanel;
 
     juce::TextButton playButton { "Play" };
     juce::TextButton stopButton { "Stop" };
     juce::TextButton sineTestButton { "Sine Test" };
     juce::TextButton loadButton { "Load Sample" };
     juce::ToggleButton loopButton { "Loop" };
+    juce::ToggleButton granularToggle { "Granular" };
 
     juce::Slider volumeSlider;
     juce::Label volumeLabel { {}, "Vol" };
