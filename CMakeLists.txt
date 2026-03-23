@@ -38,6 +38,10 @@ target_sources(GrainHex PRIVATE
     Source/SourceInput/AudioFileLoader.cpp
     Source/SourceInput/RootNoteDetector.cpp
 
+    # Granular
+    Source/Granular/WindowFunctions.cpp
+    Source/Granular/Interpolator.cpp
+
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
