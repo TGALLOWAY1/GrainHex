@@ -57,4 +57,26 @@ struct LoopRegion
     int64_t lengthInSamples() const { return endSample - startSample; }
 };
 
+// Sub tuning mode
+enum class SubTuningMode
+{
+    Auto,
+    Manual
+};
+
+// Auto-tune pitch snap mode
+enum class PitchSnapMode
+{
+    Strict,  // Snap to nearest semitone
+    Loose    // Follow exact detected frequency
+};
+
+// Frequency smoothing speed
+enum class SmoothingSpeed
+{
+    Slow,    // 100ms
+    Medium,  // 50ms
+    Fast     // 10ms
+};
+
 } // namespace grainhex

@@ -6,6 +6,7 @@
 #include "SourceInput/SourceSampleManager.h"
 #include "UI/WaveformView.h"
 #include "UI/GranularPanel.h"
+#include "UI/SubPanel.h"
 
 namespace grainhex {
 
@@ -15,7 +16,8 @@ namespace grainhex {
  */
 class MainEditor : public juce::Component,
                    public juce::FileDragAndDropTarget,
-                   public juce::DragAndDropContainer
+                   public juce::DragAndDropContainer,
+                   private juce::Timer
 {
 public:
     MainEditor(AudioEngine& engine, SourceSampleManager& sampleManager);
@@ -36,10 +38,13 @@ private:
     SourceSampleManager& sampleManager;
 
     void pushGranularParams();
+    void pushSubParams();
+    void timerCallback() override;
 
     // UI components
     WaveformView waveformView;
     GranularPanel granularPanel;
+    SubPanel subPanel;
 
     juce::TextButton playButton { "Play" };
     juce::TextButton stopButton { "Stop" };

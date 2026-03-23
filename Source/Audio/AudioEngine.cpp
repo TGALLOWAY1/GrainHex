@@ -39,6 +39,7 @@ void AudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
     deviceSampleRate = device->getCurrentSampleRate();
     volumeSmoother.setSmoothingTime(0.01f, deviceSampleRate);
+    subEngine.setSampleRate(deviceSampleRate);
     sinePhase = 0.0;
     DBG("AudioEngine: Device started at " + juce::String(deviceSampleRate) + " Hz, buffer "
         + juce::String(device->getCurrentBufferSizeSamples()));
@@ -172,6 +173,15 @@ void AudioEngine::renderGranular(float* const* outputChannelData, int numOutputC
         outR = outL;
 
     granularEngine.processBlock(outL, outR, numSamples, deviceSampleRate);
+
+    // Feed pitch detector with granular output BEFORE sub mix (avoids feedback)
+    subEngine.feedPitchDetector(outL, outR, numSamples);
+
+    // Apply HP filter to granular output (removes low end before sub mix)
+    subEngine.applyGranularHP(outL, outR, numSamples);
+
+    // Render sub oscillator (additive mix with granular output)
+    subEngine.processBlock(outL, outR, numSamples);
 
     // Apply master volume
     for (int i = 0; i < numSamples; ++i)

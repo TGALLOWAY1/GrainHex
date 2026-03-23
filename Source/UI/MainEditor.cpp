@@ -82,6 +82,10 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     granularPanel.setVisible(false);
     granularPanel.onParameterChanged = [this] { pushGranularParams(); };
 
+    // Sub panel
+    addAndMakeVisible(subPanel);
+    subPanel.onParameterChanged = [this] { pushSubParams(); };
+
     // Volume
     addAndMakeVisible(volumeSlider);
     volumeSlider.setRange(0.0, 1.0, 0.01);
@@ -110,7 +114,10 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
 
     updateStatusLabel("Drop a WAV, AIFF, or FLAC file to begin");
 
-    setSize(900, 700);
+    setSize(900, 850);
+
+    // Start timer for pitch display updates (30 fps)
+    startTimerHz(30);
 }
 
 void MainEditor::paint(juce::Graphics& g)
@@ -124,7 +131,7 @@ void MainEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
-    g.drawText("v0.2 — Phase 2", 160, 14, 120, 20, juce::Justification::centredLeft);
+    g.drawText("v0.3 — Phase 3", 160, 14, 120, 20, juce::Justification::centredLeft);
 
     // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
@@ -177,6 +184,10 @@ void MainEditor::resized()
         granularPanel.setBounds(area.removeFromTop(170));
         area.removeFromTop(8);
     }
+
+    // Sub panel (always visible)
+    subPanel.setBounds(area.removeFromTop(150));
+    area.removeFromTop(8);
 
     // Sample info row
     auto infoRow = area.removeFromTop(24);
@@ -259,6 +270,28 @@ void MainEditor::pushGranularParams()
     ge.setWindowShape(granularPanel.getWindowShape());
     ge.setDirection(granularPanel.getDirection());
     ge.setSpread(granularPanel.getSpread());
+}
+
+void MainEditor::pushSubParams()
+{
+    auto& se = audioEngine.getSubEngine();
+    se.setEnabled(subPanel.getEnabled());
+    se.setLevel(subPanel.getLevel());
+    se.setWaveform(subPanel.getWaveform());
+    se.setTuningMode(subPanel.getTuningMode());
+    se.setPitchSnapMode(subPanel.getPitchSnapMode());
+    se.setSmoothingSpeed(subPanel.getSmoothingSpeed());
+    se.setOctaveOffset(subPanel.getOctaveOffset());
+    se.setManualNote(subPanel.getManualMidiNote());
+    se.setGranularHPFreq(subPanel.getGranularHPFreq());
+    se.setSubLPFreq(subPanel.getSubLPFreq());
+}
+
+void MainEditor::timerCallback()
+{
+    // Update pitch display from audio thread snapshot
+    auto pitch = audioEngine.getDetectedPitch();
+    subPanel.setDetectedPitch(pitch);
 }
 
 } // namespace grainhex

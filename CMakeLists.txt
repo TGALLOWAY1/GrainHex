@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(GrainHex VERSION 0.1.0 LANGUAGES CXX)
+project(GrainHex VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(JUCE)
 # GrainHex standalone app
 juce_add_gui_app(GrainHex
     PRODUCT_NAME "GrainHex"
-    VERSION "0.1.0"
+    VERSION "0.3.0"
     COMPANY_NAME "GrainHex"
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -45,10 +45,15 @@ target_sources(GrainHex PRIVATE
     Source/Granular/GrainScheduler.cpp
     Source/Granular/GranularEngine.cpp
 
+    # Sub
+    Source/Sub/SubEngine.cpp
+    Source/Sub/PitchDetector.cpp
+
     # UI
     Source/UI/MainEditor.cpp
     Source/UI/WaveformView.cpp
     Source/UI/GranularPanel.cpp
+    Source/UI/SubPanel.cpp
 )
 
 target_include_directories(GrainHex PRIVATE
@@ -62,6 +67,11 @@ target_compile_definitions(GrainHex PRIVATE
     JUCE_USE_CURL=0
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
+    JUCE_USE_XRANDR=0
+    JUCE_USE_XINERAMA=0
+    JUCE_USE_XCURSOR=0
+    JUCE_ALSA=0
+    JUCE_JACK=0
 )
 
 target_link_libraries(GrainHex PRIVATE
