@@ -61,8 +61,6 @@ Implement the app as a small set of clear subsystems.
   - distortion + filter for granular output only
 - `ModulationEngine`
   - LFO, ADSR, target assignments
-- `MidiManager`
-  - MIDI note routing, CC learn, device selection
 - `ResampleEngine`
   - captures full output, stores history, reloads source, exports WAV
 - `AppState`
@@ -139,9 +137,6 @@ Source/
     Lfo.h/.cpp
     Envelope.h/.cpp
     ModulationRouter.h/.cpp
-  MIDI/
-    MidiManager.h/.cpp
-    MidiLearnManager.h/.cpp
   Resample/
     ResampleEngine.h/.cpp
     WavExporter.h/.cpp
@@ -626,7 +621,7 @@ Do not move to Phase 4 until:
 
 ---
 
-# 5. Phase 4 — Effects, Modulation, MIDI
+# 5. Phase 4 — Effects, Modulation
 
 **Goal:** add the minimum performance and shaping layer needed for a complete V1 sound-design workflow: distortion, filter, one LFO, one envelope, and MIDI input / learn. The PRD is explicit that V1 should stay minimal here. fileciteturn1file1
 
@@ -661,14 +656,7 @@ Implement only:
 - right-click assignment to parameters
 - no modulation matrix in V1
 
-## 5.3 MIDI scope
-
-Implement only:
-- MIDI note input for granular pitch
-- MIDI learn on knobs
-- MIDI device selection
-- visual MIDI activity indicator
-- no MPE / no aftertouch routing for V1
+# 5.3 Skipped (REMOVED MIDI REQUIREMENTS)
 
 ## 5.4 Implementation order
 
@@ -703,7 +691,6 @@ Done when:
 
 Implement:
 - ADSR with clean state transitions
-- note-trigger integration for MIDI-driven use
 - default route to filter amount
 
 Done when:
@@ -721,23 +708,12 @@ Implement:
 Done when:
 - modulation assignment feels obvious and inspectable
 
-### Step 6 — MIDI note and learn
-
-Implement:
-- incoming note mapped relative to source root note / current pitch framework
-- CC learn persistence for current session minimum
-- selected MIDI input device handling
-
-Done when:
-- keyboard can play the granular engine chromatically
-- hardware knobs can control parameters after learn
 
 ## 5.5 Exit criteria
 
 Do not move to Phase 5 until:
 - distortion and filter feel production-relevant
 - modulation is smooth and inspectable
-- MIDI note and CC control work reliably
 
 ---
 
@@ -928,7 +904,6 @@ Use the development plan’s V1 ship criteria as the release gate:
 - granular engine complete and competitive
 - sub tuner accurate and clean
 - effects and modulation working
-- MIDI working
 - resample and export working
 - factory content present
 - UI polished
@@ -950,7 +925,7 @@ Each parameter should support:
 - default value
 - smoothing strategy
 - modulation contribution
-- automation/MIDI contribution
+- automation contribution
 
 Avoid ad hoc parameter ownership spread throughout UI widgets.
 
@@ -969,7 +944,6 @@ Use read-only snapshots / atomics for:
 - playhead
 - active grain markers
 - detected pitch
-- MIDI activity
 - output meters
 
 Do not let the UI lock the DSP pipeline.
@@ -1018,8 +992,6 @@ Shaping and control:
 - filter
 - LFO
 - ADSR
-- MIDI note input
-- MIDI learn
 
 ## Milestone 5
 Workflow differentiator complete:
