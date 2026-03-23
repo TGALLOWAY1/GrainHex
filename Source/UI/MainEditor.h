@@ -7,12 +7,14 @@
 #include "UI/WaveformView.h"
 #include "UI/GranularPanel.h"
 #include "UI/SubPanel.h"
+#include "UI/EffectsPanel.h"
+#include "UI/ModulationPanel.h"
 
 namespace grainhex {
 
 /**
  * Main editor component — owns the full UI layout.
- * Phase 1: waveform, transport controls, sample info, drag-and-drop zone.
+ * Phase 4: adds effects, modulation, and MIDI panels.
  */
 class MainEditor : public juce::Component,
                    public juce::FileDragAndDropTarget,
@@ -39,12 +41,16 @@ private:
 
     void pushGranularParams();
     void pushSubParams();
+    void pushEffectsParams();
+    void pushModulationParams();
     void timerCallback() override;
 
     // UI components
     WaveformView waveformView;
     GranularPanel granularPanel;
     SubPanel subPanel;
+    EffectsPanel effectsPanel;
+    ModulationPanel modulationPanel;
 
     juce::TextButton playButton { "Play" };
     juce::TextButton stopButton { "Stop" };
@@ -59,6 +65,9 @@ private:
     juce::Label statusLabel;
     juce::Label rootNoteLabel;
     juce::Label sampleInfoLabel;
+
+    // MIDI activity indicator
+    juce::Label midiActivityLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainEditor)
 };
