@@ -248,7 +248,7 @@ Sidebar:       260px (reduced from 280)
 ---
 
 ### Phase 7: Effects & Modulation Sidebar
-**Files:** `EffectsPanel.h`, `EffectsPanel.cpp`, `ModulationPanel.h`, `ModulationPanel.cpp`
+**Files:** `EffectsPanel.h`, `EffectsPanel.cpp`, `ModulationPanel.h`, `ModulationPanel.cpp`, `LFO.h`
 
 **Effects panel — collapsible sections:**
 - Each sub-section (Distortion, Filter) has a header bar with:
@@ -268,16 +268,136 @@ Sidebar:       260px (reduced from 280)
 - Cutoff (large knob) + Resonance (standard) + Env Amount (standard)
 - Accent: `accentOrange`
 
-**Modulation panel — same collapsible pattern:**
-- LFO section: Shape dropdown + Rate knob + Depth knob
-- Envelope section: A, D, S, R knobs in a row
-  - Add mini ADSR visualization curve above knobs (simple path drawing)
-  - Shows current envelope shape in real-time as knobs change
-- Accent: `accentRed` for both
-
 **Inactive module dimming:**
 - When toggle is off, section controls render at 40% opacity
 - Background reverts to `bgPanel` from `bgElevated`
+
+#### 7b: ADSR Visual Envelope Editor (replaces knobs)
+**Reference:** Sebastian Lague-style breakpoint editor with colored segments
+
+Replace the 4 ADSR rotary knobs with a visual, draggable envelope display.
+
+**New component: `EnvelopeEditor` (nested class or separate file)**
+- A `juce::Component` that renders and allows interactive editing of the ADSR shape
+- Layout: full width of the envelope section, ~80-100px tall
+
+**Visual design:**
+```
+┌─ Envelope ──────────────────────────────────────────────┐
+│ [On/Off]                                                 │
+│                                                           │
+│  ATTACK  67     DECAY   320              RELEASE  49     │
+│  ·──────────────·──────────────────────────·─ ─ ─ ─·    │
+│  │  ╱           │ ╲                        :       │    │
+│  │╱  (red)      │   ╲  (orange/yellow)     : (cyan)│    │
+│  ·              │     ╲────────────────────·───────·    │
+│                 │      sustain level        │            │
+│  0                                                  0    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Segment colors (matching the reference screenshots):**
+- Attack segment: `accentRed` / warm red (#ff6666 → #ee5555)
+- Decay segment: orange/yellow (#ffaa44 → #eeaa33)
+- Sustain level: horizontal line in decay color at sustain height
+- Release segment: `accentCyan` / light blue (#66ccff → #55bbee)
+
+**Breakpoint nodes (4 draggable points):**
+1. **Start point** (0, 0) — bottom-left, fixed X, not draggable
+2. **Attack peak** (attackTime, 1.0) — drag horizontally to change attack time. Top of display.
+3. **Sustain point** (attackTime + decayTime, sustainLevel) — drag horizontally for decay time, vertically for sustain level
+4. **End point** (totalWidth, 0) — drag horizontally to change release time. Bottom-right.
+
+**Node rendering:**
+- Small circles (6px radius) with outline matching segment color, filled white/bright
+- On hover: enlarge to 8px, show value tooltip
+- On drag: constrain to valid ranges, update slider values in real-time
+
+**Curve rendering:**
+- Attack: curved path (concave upward, like an exponential rise) from start → peak
+- Decay: curved path (concave downward) from peak → sustain level
+- Sustain: horizontal dashed line at sustain level (visual only — sustain is held indefinitely)
+- Release: curved path from sustain level → 0
+- Use `juce::Path` with `quadraticTo()` for smooth curves (not straight lines)
+- Fill below each segment with the segment color at ~15% opacity
+
+**Value labels:**
+- Show "ATTACK" + value (ms) above/near the attack segment in red
+- Show "DECAY" + value (ms) above/near the decay segment in orange
+- Show "RELEASE" + value (ms) above/near the release segment in cyan
+- Values update in real-time as breakpoints are dragged
+- Format: integer ms for values < 1s, one decimal seconds for values >= 1s
+
+**Implementation approach:**
+- Keep the existing `attackSlider`, `decaySlider`, `sustainSlider`, `releaseSlider` as hidden data-holding sliders (setVisible(false))
+- The `EnvelopeEditor` component reads/writes to these sliders
+- `paint()` draws the envelope path, filled regions, nodes, and labels
+- `mouseDown()` / `mouseDrag()` / `mouseUp()` handle breakpoint dragging
+- Hit-test each node (within 12px radius), select nearest on mouseDown
+- On drag: map mouse X to time value, mouse Y to level (sustain only), call `slider.setValue()`
+- `onValueChange` callbacks on the hidden sliders trigger `repaint()` and `parameterChanged()`
+
+**Time-to-pixel mapping:**
+- Total display width represents the full A+D+R time range
+- Each segment gets proportional horizontal space based on its time value
+- Minimum segment width: 20px (so short times don't disappear)
+- Scale: use a logarithmic or skewed mapping so short times get reasonable visual width
+
+#### 7c: LFO Redesign — Shape Preview + Tempo Sync
+**Files:** `ModulationPanel.h`, `ModulationPanel.cpp`, `LFO.h`
+
+**LFO section redesign (Serum-inspired):**
+```
+┌─ LFO ──────────────────────────────────────────────────┐
+│ [On/Off]                                                 │
+│                                                           │
+│  ┌─ Shape Preview ──────────────────────────────────┐   │
+│  │  ∼∼∼∼∼∼∼∼∼∼∼∼∼∼∼∼  (one cycle waveform)        │   │
+│  │  ════════════════════  (playback position line)   │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                           │
+│  Shape [Sine ▾]   Rate [knob]   Depth [knob]            │
+│                   Sync [Off ▾]                            │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Shape preview display:**
+- ~40px tall mini waveform showing one full cycle of the selected LFO shape
+- Rendered in `accentRed` with fill below at 15% opacity
+- Animated playback position indicator (vertical line sweeping across at current rate)
+- Shapes: Sine, Triangle, Square, S&H (rendered as stepped random pattern)
+- Background: `bgDarkest` for contrast
+
+**Tempo sync feature:**
+- Add a `juce::ComboBox syncModeBox` with options:
+  - "Free" (current Hz-based rate — default)
+  - "1/1" (whole note)
+  - "1/2" (half note)
+  - "1/4" (quarter note)
+  - "1/8" (eighth note)
+  - "1/16" (sixteenth note)
+  - "1/4T" (quarter triplet)
+  - "1/8T" (eighth triplet)
+  - "1/4." (dotted quarter)
+  - "1/8." (dotted eighth)
+- When sync mode is not "Free":
+  - Rate knob becomes disabled (greyed out)
+  - LFO rate is calculated from BPM: `rate = bpm / (60.0 * noteDivision)`
+  - Display the sync division name instead of Hz value
+
+**LFO engine changes (`LFO.h`):**
+- Add `void setTempoSync(bool enabled, float bpm, float noteDivision)`
+- Add `std::atomic<bool> tempoSyncEnabled { false }`
+- Add `std::atomic<float> bpm { 120.0f }`
+- Add `std::atomic<float> syncDivision { 1.0f }` (1.0 = quarter note, 0.5 = eighth, etc.)
+- In `tick()`: if tempo sync enabled, compute rate from `bpm / (60.0 * syncDivision)` instead of using the free rate
+
+**ModulationPanel changes:**
+- Add `lfoSyncBox` ComboBox below rate knob
+- Add `LFOShapePreview` nested component (or inline paint in LFO section area)
+- `getLFOSyncMode()` accessor returns selected sync division (or -1 for free)
+- Wire sync mode changes through `onParameterChanged`
+- Add `void setBPM(float bpm)` for MainEditor to pass host/tap tempo BPM
 
 ---
 
@@ -366,7 +486,10 @@ After all phases:
 2. Enable granular → verify grouped controls layout, all knobs functional
 3. Enable sub → verify pitch display, mode switching, crossover controls
 4. Toggle effects/modulation → verify collapsible sections expand/collapse
-5. Resample → verify history thumbnails appear and are clickable
-6. Export WAV → verify file export still works
-7. Drag-and-drop a file → verify loading works
-8. Check all accent colors match semantic roles (green=granular, purple=sub, orange=effects, red=modulation)
+5. ADSR envelope editor → verify all 4 breakpoints are draggable, values update correctly, colored segments render
+6. LFO shape preview → verify waveform preview renders for all shapes, animates at current rate
+7. LFO tempo sync → verify sync dropdown disables rate knob, rate changes with sync division
+8. Resample → verify history thumbnails appear and are clickable
+9. Export WAV → verify file export still works
+10. Drag-and-drop a file → verify loading works
+11. Check all accent colors match semantic roles (green=granular, purple=sub, orange=effects, red=modulation/ADSR segments)
