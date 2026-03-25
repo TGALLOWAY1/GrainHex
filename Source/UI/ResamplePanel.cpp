@@ -6,70 +6,82 @@ namespace grainhex {
 
 ResamplePanel::HistoryThumbnail::HistoryThumbnail()
 {
+    setRepaintsOnMouseActivity(true);
+    setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 void ResamplePanel::HistoryThumbnail::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+    auto bgColour = current ? juce::Colour(Theme::bgElevated) : juce::Colour(Theme::bgControl);
+    if (hovered)
+        bgColour = bgColour.brighter(0.08f);
 
-    // Background
-    auto bgColour = current ? juce::Colour(0xff1a3a2a) : juce::Colour(Theme::bgControl);
     g.setColour(bgColour);
-    g.fillRoundedRectangle(bounds, 4.0f);
+    g.fillRoundedRectangle(bounds, Theme::cornerRadius);
 
-    // Border
-    auto borderColour = current ? juce::Colour(Theme::accentGreen) : juce::Colour(Theme::border);
+    auto borderColour = current ? juce::Colour(Theme::accentGreen)
+                                : hovered ? juce::Colour(Theme::borderActive)
+                                          : juce::Colour(Theme::border);
     g.setColour(borderColour);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, current ? 2.0f : 1.0f);
+    g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, current ? 2.0f : 1.0f);
 
     if (historyEntry == nullptr)
         return;
 
-    // Draw waveform preview
-    auto waveArea = bounds.reduced(4.0f, 12.0f);
-    float centreY = waveArea.getCentreY();
+    auto waveArea = bounds.reduced(8.0f, 14.0f);
+    waveArea.removeFromBottom(24.0f);
+    const auto centreY = waveArea.getCentreY();
 
-    g.setColour(current ? juce::Colour(Theme::accentGreen).withAlpha(0.8f) : juce::Colour(0xff6666aa));
+    g.setColour(current ? juce::Colour(Theme::accentGreen).withAlpha(0.9f)
+                        : juce::Colour(Theme::textDim).withAlpha(0.8f));
 
-    const int numPoints = static_cast<int>(historyEntry->previewMin.size());
+    const auto numPoints = static_cast<int>(historyEntry->previewMin.size());
     if (numPoints > 0)
     {
-        float xScale = waveArea.getWidth() / static_cast<float>(numPoints);
-        float yScale = waveArea.getHeight() * 0.5f;
+        const auto xScale = waveArea.getWidth() / static_cast<float>(numPoints);
+        const auto yScale = waveArea.getHeight() * 0.5f;
 
-        for (int i = 0; i < numPoints; ++i)
+        for (int point = 0; point < numPoints; ++point)
         {
-            float x = waveArea.getX() + static_cast<float>(i) * xScale;
-            float minY = centreY - historyEntry->previewMin[static_cast<size_t>(i)] * yScale;
-            float maxY = centreY - historyEntry->previewMax[static_cast<size_t>(i)] * yScale;
+            const auto x = waveArea.getX() + static_cast<float>(point) * xScale;
+            const auto minY = centreY - historyEntry->previewMin[static_cast<size_t>(point)] * yScale;
+            const auto maxY = centreY - historyEntry->previewMax[static_cast<size_t>(point)] * yScale;
             g.drawVerticalLine(static_cast<int>(x), std::min(minY, maxY), std::max(minY, maxY));
         }
     }
 
-    // Iteration label
-    g.setColour(juce::Colours::white.withAlpha(0.7f));
-    g.setFont(10.0f);
-    g.drawText("#" + juce::String(entryIndex + 1), bounds.reduced(4.0f, 2.0f),
-               juce::Justification::topLeft);
+    auto metaArea = bounds.reduced(8.0f, 6.0f);
+    metaArea.removeFromTop(static_cast<int>(waveArea.getBottom() - bounds.getY()) + 6);
 
-    // Root note label
+    g.setFont(juce::Font(Theme::fontSmall).boldened());
+    g.setColour(juce::Colour(Theme::textBright));
+    g.drawText("#" + juce::String(entryIndex + 1), metaArea.removeFromTop(12), juce::Justification::centredLeft);
+
+    g.setFont(juce::Font(Theme::fontMetadata));
+    g.setColour(juce::Colour(Theme::textDim));
+    g.drawText(juce::String(historyEntry->getLengthSeconds(), 1) + "s",
+               metaArea.removeFromTop(11), juce::Justification::centredLeft);
+
     if (historyEntry->rootNote.midiNote >= 0)
     {
-        g.drawText(historyEntry->rootNote.getNoteName(), bounds.reduced(4.0f, 2.0f),
-                   juce::Justification::topRight);
+        g.setColour(juce::Colour(Theme::textNormal));
+        g.drawText(historyEntry->rootNote.getNoteName(), metaArea, juce::Justification::centredRight);
     }
+}
 
-    // Duration
-    g.drawText(juce::String(historyEntry->getLengthSeconds(), 1) + "s",
-               bounds.reduced(4.0f, 2.0f), juce::Justification::bottomLeft);
+void ResamplePanel::HistoryThumbnail::mouseEnter(const juce::MouseEvent& e)
+{
+    juce::ignoreUnused(e);
+    hovered = true;
+    repaint();
+}
 
-    // Exported indicator
-    if (historyEntry->exported)
-    {
-        g.setColour(juce::Colour(Theme::accentGreen).withAlpha(0.6f));
-        g.setFont(9.0f);
-        g.drawText("EXP", bounds.reduced(4.0f, 2.0f), juce::Justification::bottomRight);
-    }
+void ResamplePanel::HistoryThumbnail::mouseExit(const juce::MouseEvent& e)
+{
+    juce::ignoreUnused(e);
+    hovered = false;
+    repaint();
 }
 
 void ResamplePanel::HistoryThumbnail::mouseDown(const juce::MouseEvent& e)
@@ -108,55 +120,56 @@ void ResamplePanel::HistoryThumbnail::setEntry(const ResampleHistoryEntry* entry
 
 ResamplePanel::ResamplePanel()
 {
-    // Resample button
     addAndMakeVisible(resampleButton);
-    resampleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::accentGreen));
+    resampleButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonPrimary));
+    resampleButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Theme::bgDarkest));
     resampleButton.onClick = [this] { if (onResample) onResample(); };
 
-    // Undo button
     addAndMakeVisible(undoButton);
+    undoButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonUtility));
     undoButton.onClick = [this] { if (onUndo) onUndo(); };
 
-    // Export button
     addAndMakeVisible(exportButton);
+    exportButton.setVisible(false);
     exportButton.onClick = [this] { if (onExportCurrent) onExportCurrent(); };
 
-    // Clear button
     addAndMakeVisible(clearButton);
+    clearButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonDestructive));
     clearButton.onClick = [this] { if (onClearHistory) onClearHistory(); };
 
-    // Capture length slider
     addAndMakeVisible(captureLengthSlider);
     captureLengthSlider.setRange(0.5, 30.0, 0.5);
     captureLengthSlider.setValue(4.0, juce::dontSendNotification);
     captureLengthSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    captureLengthSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 45, 20);
+    captureLengthSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 18);
     captureLengthSlider.setTextValueSuffix("s");
+
     addAndMakeVisible(captureLengthLabel);
     captureLengthLabel.setJustificationType(juce::Justification::centredRight);
     captureLengthLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
+    captureLengthLabel.setFont(juce::Font(Theme::fontLabel));
 
-    // Bit depth selector
     addAndMakeVisible(bitDepthSelector);
     bitDepthSelector.addItem("16-bit", 1);
     bitDepthSelector.addItem("24-bit", 2);
     bitDepthSelector.addItem("32-float", 3);
-    bitDepthSelector.setSelectedId(2, juce::dontSendNotification); // Default 24-bit
+    bitDepthSelector.setSelectedId(2, juce::dontSendNotification);
+
     addAndMakeVisible(bitDepthLabel);
     bitDepthLabel.setJustificationType(juce::Justification::centredRight);
     bitDepthLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
+    bitDepthLabel.setFont(juce::Font(Theme::fontLabel));
 
-    // History label
     addAndMakeVisible(historyLabel);
-    historyLabel.setFont(juce::Font(14.0f).boldened());
-    historyLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentGreen));
+    historyLabel.setText("History", juce::dontSendNotification);
+    historyLabel.setFont(juce::Font(Theme::fontSmall).boldened());
+    historyLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textDim));
 
-    // Progress label
     addAndMakeVisible(progressLabel);
-    progressLabel.setJustificationType(juce::Justification::centred);
-    progressLabel.setColour(juce::Label::textColourId, juce::Colours::yellow);
+    progressLabel.setJustificationType(juce::Justification::centredRight);
+    progressLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textBright));
+    progressLabel.setFont(juce::Font(Theme::fontMetadata));
 
-    // History thumbnails
     for (auto& thumb : thumbnails)
     {
         addChildComponent(thumb);
@@ -164,7 +177,6 @@ ResamplePanel::ResamplePanel()
         thumb.onExport = [this](int index) { if (onExport) onExport(index); };
         thumb.onDragStart = [this](int index, const juce::MouseEvent&)
         {
-            // Drag-and-drop out: handled by parent DragAndDropContainer
             if (onExport)
                 onExport(index);
         };
@@ -175,18 +187,35 @@ void ResamplePanel::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
-    // Panel background
     g.setColour(juce::Colour(Theme::bgPanel));
     g.fillRoundedRectangle(bounds, Theme::cornerRadius);
 
-    // Border
     g.setColour(juce::Colour(Theme::border));
     g.drawRoundedRectangle(bounds.reduced(0.5f), Theme::cornerRadius, Theme::borderWidth);
 
-    // Capture progress bar
+    g.setColour(juce::Colour(Theme::accentGreen));
+    g.setFont(juce::Font(Theme::fontSectionHead).boldened());
+    g.drawText("RESAMPLE", 12, 6, 100, 18, juce::Justification::centredLeft);
+
+    auto historyArea = historyBounds;
+
+    g.setColour(juce::Colour(Theme::bgControl));
+    g.fillRoundedRectangle(historyArea.toFloat(), Theme::cornerRadius);
+    g.setColour(juce::Colour(Theme::borderSubtle));
+    g.drawRoundedRectangle(historyArea.toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
+
+    if (visibleThumbnails == 0)
+    {
+        g.setColour(juce::Colour(Theme::textDim));
+        g.setFont(juce::Font(Theme::fontValue));
+        g.drawText("Resample to start building history",
+                   historyArea.reduced(14).toFloat().toNearestInt(),
+                   juce::Justification::centred);
+    }
+
     if (captureProgress > 0.0f && captureProgress < 1.0f)
     {
-        auto progressArea = bounds.reduced(10.0f).removeFromBottom(4.0f);
+        auto progressArea = historyArea.removeFromBottom(4).reduced(14, 0).toFloat();
         g.setColour(juce::Colour(Theme::border));
         g.fillRoundedRectangle(progressArea, 2.0f);
         g.setColour(juce::Colour(Theme::accentGreen));
@@ -196,75 +225,68 @@ void ResamplePanel::paint(juce::Graphics& g)
 
 void ResamplePanel::resized()
 {
-    auto area = getLocalBounds().reduced(10);
+    auto area = getLocalBounds().reduced(Theme::panelPadding);
+    area.removeFromTop(24);
 
-    // Top row: title + resample button + undo
-    auto topRow = area.removeFromTop(28);
-    historyLabel.setBounds(topRow.removeFromLeft(160));
-    topRow.removeFromLeft(10);
-    resampleButton.setBounds(topRow.removeFromLeft(90));
-    topRow.removeFromLeft(5);
-    undoButton.setBounds(topRow.removeFromLeft(55));
-    topRow.removeFromLeft(5);
-    clearButton.setBounds(topRow.removeFromLeft(55));
-
-    area.removeFromTop(6);
-
-    // Controls row: capture length + bit depth + export
-    auto controlRow = area.removeFromTop(26);
-    captureLengthLabel.setBounds(controlRow.removeFromLeft(45));
+    auto controlRow = area.removeFromTop(28);
+    resampleButton.setBounds(controlRow.removeFromLeft(98));
+    controlRow.removeFromLeft(Theme::controlGap);
+    captureLengthLabel.setBounds(controlRow.removeFromLeft(46));
     controlRow.removeFromLeft(4);
-    captureLengthSlider.setBounds(controlRow.removeFromLeft(180));
-    controlRow.removeFromLeft(15);
-    bitDepthLabel.setBounds(controlRow.removeFromLeft(55));
+    captureLengthSlider.setBounds(controlRow.removeFromLeft(160));
+    controlRow.removeFromLeft(Theme::sectionGap);
+    bitDepthLabel.setBounds(controlRow.removeFromLeft(48));
     controlRow.removeFromLeft(4);
-    bitDepthSelector.setBounds(controlRow.removeFromLeft(90));
-    controlRow.removeFromLeft(10);
-    exportButton.setBounds(controlRow.removeFromLeft(90));
-
-    // Progress label
+    bitDepthSelector.setBounds(controlRow.removeFromLeft(92));
     progressLabel.setBounds(controlRow);
 
-    area.removeFromTop(8);
+    area.removeFromTop(Theme::sectionGap);
+    historyLabel.setBounds(area.removeFromTop(16));
+    area.removeFromTop(4);
 
-    // History thumbnails — horizontal strip
-    auto historyArea = area;
-    int thumbWidth = (historyArea.getWidth() - 7 * 4) / 8; // 4px gap between thumbnails
-    int thumbHeight = historyArea.getHeight();
+    auto actionsRow = area.removeFromBottom(28);
+    undoButton.setBounds(actionsRow.removeFromLeft(72));
+    clearButton.setBounds(actionsRow.removeFromRight(72));
 
-    for (int i = 0; i < 8; ++i)
+    area.removeFromBottom(Theme::controlGap);
+    historyBounds = area;
+
+    const int gap = Theme::controlGap;
+    const int thumbCount = 8;
+    const int thumbWidth = (historyBounds.getWidth() - gap * (thumbCount - 1) - 20) / thumbCount;
+    const int thumbHeight = historyBounds.getHeight() - 20;
+    auto thumbArea = historyBounds.reduced(10, 10);
+
+    for (int index = 0; index < 8; ++index)
     {
-        auto thumbBounds = historyArea.removeFromLeft(thumbWidth);
-        thumbnails[static_cast<size_t>(i)].setBounds(thumbBounds.withHeight(thumbHeight));
-        if (i < 7)
-            historyArea.removeFromLeft(4);
+        const int x = thumbArea.getX() + index * (thumbWidth + gap);
+        thumbnails[static_cast<size_t>(index)].setBounds(x, thumbArea.getY(), thumbWidth, thumbHeight);
     }
 }
 
 void ResamplePanel::updateFromEngine(ResampleEngine& engine)
 {
-    int count = engine.getHistorySize();
-    int current = engine.getCurrentIndex();
+    const auto count = engine.getHistorySize();
+    const auto current = engine.getCurrentIndex();
     visibleThumbnails = count;
 
-    for (int i = 0; i < 8; ++i)
+    for (int index = 0; index < 8; ++index)
     {
-        if (i < count)
+        if (index < count)
         {
-            thumbnails[static_cast<size_t>(i)].setEntry(engine.getHistoryEntry(i), i, i == current);
-            thumbnails[static_cast<size_t>(i)].setVisible(true);
+            thumbnails[static_cast<size_t>(index)].setEntry(engine.getHistoryEntry(index), index, index == current);
+            thumbnails[static_cast<size_t>(index)].setVisible(true);
         }
         else
         {
-            thumbnails[static_cast<size_t>(i)].setEntry(nullptr, -1, false);
-            thumbnails[static_cast<size_t>(i)].setVisible(false);
+            thumbnails[static_cast<size_t>(index)].setEntry(nullptr, -1, false);
+            thumbnails[static_cast<size_t>(index)].setVisible(false);
         }
     }
 
-    // Update button states
     undoButton.setEnabled(current > 0);
-    exportButton.setEnabled(count > 0);
     clearButton.setEnabled(count > 0);
+    repaint();
 }
 
 void ResamplePanel::setCaptureProgress(float progress)
@@ -275,7 +297,7 @@ void ResamplePanel::setCaptureProgress(float progress)
     {
         resampleButton.setEnabled(false);
         progressLabel.setText("Capturing " + juce::String(static_cast<int>(progress * 100.0f)) + "%",
-                             juce::dontSendNotification);
+                              juce::dontSendNotification);
     }
     else
     {

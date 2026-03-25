@@ -21,6 +21,8 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void mouseUp(const juce::MouseEvent& event) override;
+    void mouseMove(const juce::MouseEvent& event) override;
 
     // Distortion accessors
     bool getDistortionEnabled() const;
@@ -40,6 +42,7 @@ public:
 
 private:
     void parameterChanged();
+    void updateSectionVisibility();
 
     // Distortion controls
     juce::ToggleButton distortionToggle { "Distortion" };
@@ -65,6 +68,13 @@ private:
 
     juce::Slider envAmountSlider;
     juce::Label envAmountLabel { {}, "Env Amt" };
+
+    bool distortionExpanded = true;
+    bool filterExpanded = true;
+    juce::Rectangle<int> distortionHeaderBounds;
+    juce::Rectangle<int> distortionBodyBounds;
+    juce::Rectangle<int> filterHeaderBounds;
+    juce::Rectangle<int> filterBodyBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EffectsPanel)
 };

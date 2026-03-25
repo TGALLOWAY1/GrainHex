@@ -55,6 +55,8 @@ private:
     public:
         HistoryThumbnail();
         void paint(juce::Graphics& g) override;
+        void mouseEnter(const juce::MouseEvent& e) override;
+        void mouseExit(const juce::MouseEvent& e) override;
         void mouseDown(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;
 
@@ -68,6 +70,7 @@ private:
         const ResampleHistoryEntry* historyEntry = nullptr;
         int entryIndex = -1;
         bool current = false;
+        bool hovered = false;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HistoryThumbnail)
     };
@@ -92,6 +95,7 @@ private:
     int visibleThumbnails = 0;
 
     float captureProgress = 0.0f;
+    juce::Rectangle<int> historyBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ResamplePanel)
 };
