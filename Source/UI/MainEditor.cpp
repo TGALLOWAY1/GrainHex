@@ -108,6 +108,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
 
     addAndMakeVisible(modulationPanel);
     modulationPanel.setVisible(false);
+    modulationPanel.setBPM(120.0f);
     modulationPanel.onParameterChanged = [this] { pushModulationParams(); };
 
     // === BOTTOM-RIGHT: Resample panel ===
@@ -383,9 +384,11 @@ void MainEditor::filesDropped(const juce::StringArray& files, int /*x*/, int /*y
 
 void MainEditor::loadFile(const juce::File& file)
 {
-    updateStatusLabel("Loading: " + file.getFileName() + "...");
+    const auto extension = file.getFileExtension().toLowerCase();
+    const bool wavImport = extension == ".wav" || extension == ".wave";
+    updateStatusLabel((wavImport ? "Importing WAV: " : "Loading sample: ") + file.getFileName() + "...");
 
-    sampleManager.loadFileAsync(file, [this](bool success, const juce::String& message)
+    sampleManager.loadFileAsync(file, [this, wavImport](bool success, const juce::String& message)
     {
         if (success)
         {
@@ -410,6 +413,12 @@ void MainEditor::loadFile(const juce::File& file)
             setSampleInfoText(info);
             sampleBrowser.clearLoadedSample();
             updateTransportButtons();
+
+            updateStatusLabel((wavImport ? "Imported WAV: " : "Loaded sample: ")
+                              + meta.filename
+                              + " | Root: " + meta.rootNote.getNoteName()
+                              + " (" + juce::String(meta.rootNote.confidence * 100.0f, 0) + "% confidence)");
+            return;
         }
 
         updateStatusLabel(message);
@@ -518,11 +527,15 @@ void MainEditor::pushEffectsParams()
 void MainEditor::pushModulationParams()
 {
     auto& me = audioEngine.getModulationEngine();
+    const auto syncDivision = modulationPanel.getLFOSyncDivision();
 
     me.getLFO().setEnabled(modulationPanel.getLFOEnabled());
     me.getLFO().setShape(modulationPanel.getLFOShape());
     me.getLFO().setRate(modulationPanel.getLFORate());
     me.getLFO().setDepth(modulationPanel.getLFODepth());
+    me.getLFO().setTempoSync(syncDivision > 0.0f,
+                             modulationPanel.getBPM(),
+                             syncDivision > 0.0f ? syncDivision : 1.0f);
 
     me.getEnvelope().setEnabled(modulationPanel.getEnvelopeEnabled());
     me.getEnvelope().setAttack(modulationPanel.getAttack());

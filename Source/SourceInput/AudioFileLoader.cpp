@@ -55,13 +55,14 @@ AudioFileLoader::LoadResult AudioFileLoader::loadFile(const juce::File& file)
 bool AudioFileLoader::isFormatSupported(const juce::File& file) const
 {
     auto extension = file.getFileExtension().toLowerCase();
-    return extension == ".wav" || extension == ".aiff" || extension == ".aif"
+    return extension == ".wav" || extension == ".wave"
+        || extension == ".aiff" || extension == ".aif"
         || extension == ".flac";
 }
 
 juce::String AudioFileLoader::getSupportedFormatsWildcard() const
 {
-    return "*.wav;*.aiff;*.aif;*.flac";
+    return "*.wav;*.wave;*.aiff;*.aif;*.flac";
 }
 
 } // namespace grainhex
