@@ -29,8 +29,6 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
 
     // Transport buttons
     addAndMakeVisible(playButton);
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::accentGreen));
-    playButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Theme::bgDarkest));
     playButton.onClick = [this]
     {
         audioEngine.setSineTestEnabled(false);
@@ -39,6 +37,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     };
 
     addAndMakeVisible(stopButton);
+    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonSecondary));
     stopButton.onClick = [this]
     {
         audioEngine.stop();
@@ -46,10 +45,13 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     };
 
     addAndMakeVisible(loadButton);
+    loadButton.setButtonText("Import WAV");
+    loadButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::accentOrange));
+    loadButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Theme::bgDarkest));
     loadButton.onClick = [this]
     {
         auto chooser = std::make_shared<juce::FileChooser>(
-            "Load Sample", juce::File{}, sampleManager.getSupportedFormatsWildcard());
+            "Import WAV or Audio Sample", juce::File{}, sampleManager.getSupportedFormatsWildcard());
         chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [this, chooser](const juce::FileChooser& fc)
             {
@@ -61,6 +63,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
 
     addAndMakeVisible(loopButton);
     loopButton.setToggleState(true, juce::dontSendNotification);
+    loopButton.setColour(juce::ToggleButton::tickColourId, juce::Colour(Theme::accentCyan));
     loopButton.onClick = [this] { audioEngine.setLoopEnabled(loopButton.getToggleState()); };
 
     addAndMakeVisible(granularToggle);
@@ -80,17 +83,13 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     addAndMakeVisible(rootNoteLabel);
     rootNoteLabel.setJustificationType(juce::Justification::centredRight);
     rootNoteLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentCyan));
-    rootNoteLabel.setFont(juce::Font(18.0f).boldened());
+    rootNoteLabel.setFont(juce::Font(Theme::fontValue).boldened());
+    rootNoteLabel.setText("Root --", juce::dontSendNotification);
 
     addAndMakeVisible(sampleInfoLabel);
     sampleInfoLabel.setJustificationType(juce::Justification::centredLeft);
     sampleInfoLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textDim));
-
-    addAndMakeVisible(midiActivityLabel);
-    midiActivityLabel.setText("MIDI", juce::dontSendNotification);
-    midiActivityLabel.setJustificationType(juce::Justification::centred);
-    midiActivityLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textMuted));
-    midiActivityLabel.setFont(juce::Font(11.0f));
+    sampleInfoLabel.setFont(juce::Font(Theme::fontMetadata));
 
     // === CENTER: Granular panel ===
     addAndMakeVisible(granularPanel);
@@ -129,29 +128,36 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     volumeSlider.setValue(0.8, juce::dontSendNotification);
     volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(Theme::accentGreen));
     volumeSlider.onValueChange = [this]
     {
         audioEngine.setMasterVolume(static_cast<float>(volumeSlider.getValue()));
     };
     addAndMakeVisible(volumeLabel);
     volumeLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textDim));
-    volumeLabel.setFont(juce::Font(11.0f));
+    volumeLabel.setFont(juce::Font(Theme::fontMetadata));
 
     addAndMakeVisible(monoLockToggle);
     monoLockToggle.setToggleState(false, juce::dontSendNotification);
+    monoLockToggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(Theme::accentGreen));
     monoLockToggle.onClick = [this]
     {
         audioEngine.setMonoLock(monoLockToggle.getToggleState());
     };
 
     addAndMakeVisible(exportButton);
+    exportButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonPrimary));
+    exportButton.setColour(juce::TextButton::textColourOffId, juce::Colour(Theme::bgDarkest));
     exportButton.onClick = [this] { handleExportCurrent(); };
 
     addAndMakeVisible(statusLabel);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textDim));
-    statusLabel.setFont(juce::Font(11.0f));
+    statusLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textBright));
+    statusLabel.setFont(juce::Font(Theme::fontMetadata).boldened());
+    statusLabel.setInterceptsMouseClicks(false, false);
+    statusLabel.setVisible(false);
 
+    setSampleInfoText("Drop a WAV file, import one, or pick a factory sample");
     updateStatusLabel("Drop a sample or pick one from the browser");
     updateTransportButtons();
 
@@ -201,14 +207,38 @@ void MainEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(Theme::bgDark));
 
-    // Title bar
-    g.setColour(juce::Colour(Theme::accentGreen));
+    if (!transportBarBounds.isEmpty())
+    {
+        auto transport = transportBarBounds.toFloat();
+        g.setColour(juce::Colour(Theme::bgPanel));
+        g.fillRoundedRectangle(transport, Theme::cornerRadius);
+        g.setColour(juce::Colour(Theme::borderSubtle));
+        g.drawLine(transport.getX(), transport.getY(), transport.getRight(), transport.getY(), 1.0f);
+        g.drawLine(transport.getX(), transport.getBottom(), transport.getRight(), transport.getBottom(), 1.0f);
+        g.drawLine(static_cast<float>(loadButton.getX() - 10), transport.getY() + 6.0f,
+                   static_cast<float>(loadButton.getX() - 10), transport.getBottom() - 6.0f, 1.0f);
+    }
+
+    if (!footerBarBounds.isEmpty())
+    {
+        auto footer = footerBarBounds.toFloat();
+        g.setColour(juce::Colour(Theme::bgPanel));
+        g.fillRoundedRectangle(footer, Theme::cornerRadius);
+        g.setColour(juce::Colour(Theme::borderSubtle));
+        g.drawLine(footer.getX(), footer.getY(), footer.getRight(), footer.getY(), 1.0f);
+    }
+
+    g.setColour(juce::Colour(Theme::textBright));
     g.setFont(juce::Font(Theme::fontTitle).boldened());
     g.drawText("GrainHex", 12, 6, 160, 30, juce::Justification::centredLeft);
 
     g.setColour(juce::Colour(Theme::textMuted));
-    g.setFont(juce::Font(Theme::fontLabel));
-    g.drawText("v1.0", 130, 14, 50, 18, juce::Justification::centredLeft);
+    g.setFont(juce::Font(Theme::fontMetadata));
+    g.drawText("v1.0", 132, 13, 48, 18, juce::Justification::centredLeft);
+
+    g.setColour(midiIndicatorActive ? juce::Colour(Theme::accentGreen)
+                                    : juce::Colour(Theme::textMuted));
+    g.fillEllipse(midiIndicatorBounds.toFloat());
 
     // Update playhead and grain positions
     waveformView.setPlayheadPosition(audioEngine.getPlayheadPosition());
@@ -220,36 +250,38 @@ void MainEditor::paint(juce::Graphics& g)
 
 void MainEditor::resized()
 {
-    auto area = getLocalBounds().reduced(8);
+    auto area = getLocalBounds().reduced(10);
 
-    // === TITLE BAR (40px) ===
-    auto titleBar = area.removeFromTop(36);
-    // Root note + MIDI indicator on right
-    midiActivityLabel.setBounds(titleBar.removeFromRight(40));
-    rootNoteLabel.setBounds(titleBar.removeFromRight(100));
+    // === TITLE BAR (32px) ===
+    auto titleBar = area.removeFromTop(32);
+    titleBarBounds = titleBar;
+    auto titleRight = titleBar.removeFromRight(150);
+    midiIndicatorBounds = titleRight.removeFromRight(16).withSizeKeepingCentre(10, 10);
+    titleRight.removeFromRight(8);
+    rootNoteLabel.setBounds(titleRight.removeFromRight(120));
 
-    area.removeFromTop(4);
+    area.removeFromTop(Theme::sectionGap);
 
     // === FOOTER (36px) ===
-    auto footer = area.removeFromBottom(32);
-    volumeLabel.setBounds(footer.removeFromLeft(42));
-    volumeSlider.setBounds(footer.removeFromLeft(120));
-    footer.removeFromLeft(8);
-    monoLockToggle.setBounds(footer.removeFromLeft(65));
-    footer.removeFromLeft(8);
-    exportButton.setBounds(footer.removeFromLeft(85));
-    footer.removeFromLeft(12);
+    footerBarBounds = area.removeFromBottom(36);
+    auto footer = footerBarBounds.reduced(10, 4);
+    auto exportZone = footer.removeFromRight(122);
+    exportButton.setBounds(exportZone);
+    footer.removeFromRight(12);
+
+    auto centreZone = footer.removeFromRight(250);
+    volumeLabel.setBounds(centreZone.removeFromLeft(48));
+    volumeSlider.setBounds(centreZone.removeFromLeft(128));
+    centreZone.removeFromLeft(10);
+    monoLockToggle.setBounds(centreZone.removeFromLeft(76));
+
+    sampleInfoLabel.setBounds(footer);
     statusLabel.setBounds(footer);
 
-    area.removeFromBottom(4);
+    area.removeFromBottom(Theme::sectionGap);
 
-    // === SAMPLE INFO ROW ===
-    auto infoRow = area.removeFromBottom(20);
-    sampleInfoLabel.setBounds(infoRow);
-    area.removeFromBottom(4);
-
-    // === RIGHT SIDEBAR (effects + modulation, 280px) ===
-    const int sidebarWidth = 280;
+    // === RIGHT SIDEBAR (effects + modulation, 260px) ===
+    const int sidebarWidth = 260;
     bool sidebarVisible = effectsPanel.isVisible() || modulationPanel.isVisible();
 
     juce::Rectangle<int> sidebarArea;
@@ -260,43 +292,46 @@ void MainEditor::resized()
     }
 
     // === TOP SECTION: Waveform (left) + Browser (right) ===
-    auto topSection = area.removeFromTop(180);
+    auto topSection = area.removeFromTop(210);
     {
-        auto browserArea = topSection.removeFromRight(200);
-        topSection.removeFromRight(6);
+        auto browserArea = topSection.removeFromRight(220);
+        topSection.removeFromRight(Theme::sectionGap);
         sampleBrowser.setBounds(browserArea);
         waveformView.setBounds(topSection);
     }
-    area.removeFromTop(6);
+    area.removeFromTop(Theme::sectionGap);
 
     // === TRANSPORT ROW ===
-    auto transportRow = area.removeFromTop(30);
-    playButton.setBounds(transportRow.removeFromLeft(55));
-    transportRow.removeFromLeft(4);
-    stopButton.setBounds(transportRow.removeFromLeft(50));
-    transportRow.removeFromLeft(4);
-    loopButton.setBounds(transportRow.removeFromLeft(60));
-    transportRow.removeFromLeft(4);
-    granularToggle.setBounds(transportRow.removeFromLeft(85));
-    transportRow.removeFromLeft(12);
-    loadButton.setBounds(transportRow.removeFromLeft(55));
+    transportBarBounds = area.removeFromTop(36);
+    auto transportRow = transportBarBounds.reduced(10, 5);
+    auto loadZone = transportRow.removeFromRight(116);
+    loadButton.setBounds(loadZone);
+    transportRow.removeFromRight(14);
 
-    area.removeFromTop(6);
+    playButton.setBounds(transportRow.removeFromLeft(72));
+    transportRow.removeFromLeft(6);
+    stopButton.setBounds(transportRow.removeFromLeft(64));
+    transportRow.removeFromLeft(10);
+    loopButton.setBounds(transportRow.removeFromLeft(74));
+    transportRow.removeFromLeft(8);
+    granularToggle.setBounds(transportRow.removeFromLeft(102));
+
+    area.removeFromTop(Theme::sectionGap);
 
     // === CENTER: Granular controls ===
     if (granularPanel.isVisible())
     {
-        granularPanel.setBounds(area.removeFromTop(170));
-        area.removeFromTop(6);
+        granularPanel.setBounds(area.removeFromTop(160));
+        area.removeFromTop(Theme::sectionGap);
     }
 
     // === BOTTOM: Sub tuner (left) + Resample history (right) ===
     {
         auto bottomArea = area;
-        int halfWidth = bottomArea.getWidth() / 2 - 3;
+        int subWidth = static_cast<int>(bottomArea.getWidth() * 0.55f);
 
-        auto subArea = bottomArea.removeFromLeft(halfWidth);
-        bottomArea.removeFromLeft(6);
+        auto subArea = bottomArea.removeFromLeft(subWidth);
+        bottomArea.removeFromLeft(Theme::sectionGap);
         auto resampleArea = bottomArea;
 
         subPanel.setBounds(subArea);
@@ -371,7 +406,7 @@ void MainEditor::loadFile(const juce::File& file)
                 + " | " + juce::String(meta.lengthSeconds, 2) + "s"
                 + " | " + juce::String(meta.numChannels) + "ch"
                 + " | " + juce::String(static_cast<int>(meta.originalSampleRate)) + " Hz";
-            sampleInfoLabel.setText(info, juce::dontSendNotification);
+            setSampleInfoText(info);
             updateTransportButtons();
         }
 
@@ -401,15 +436,23 @@ void MainEditor::loadFactorySample(const FactorySample& sample)
     juce::String info = sample.name + " (" + sample.category + ")"
         + " | " + juce::String(lengthSec, 2) + "s"
         + " | " + juce::String(static_cast<int>(sample.sampleRate)) + " Hz";
-    sampleInfoLabel.setText(info, juce::dontSendNotification);
+    setSampleInfoText(info);
 
     updateTransportButtons();
     updateStatusLabel("Loaded factory sample: " + sample.name);
 }
 
+void MainEditor::setSampleInfoText(const juce::String& text)
+{
+    sampleInfoText = text;
+    sampleInfoLabel.setText(sampleInfoText, juce::dontSendNotification);
+}
+
 void MainEditor::updateStatusLabel(const juce::String& text)
 {
     statusLabel.setText(text, juce::dontSendNotification);
+    statusMessageDeadlineMs = juce::Time::getMillisecondCounterHiRes() + 4000.0;
+    statusLabel.setVisible(true);
 }
 
 void MainEditor::updateTransportButtons()
@@ -417,6 +460,11 @@ void MainEditor::updateTransportButtons()
     auto isPlaying = audioEngine.getTransportState() == TransportState::Playing;
     playButton.setEnabled(!isPlaying);
     stopButton.setEnabled(isPlaying);
+    playButton.setColour(juce::TextButton::buttonColourId,
+                         juce::Colour(isPlaying ? Theme::buttonPrimary : Theme::buttonSecondary));
+    playButton.setColour(juce::TextButton::textColourOffId,
+                         juce::Colour(isPlaying ? Theme::bgDarkest : Theme::textBright));
+    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonSecondary));
 }
 
 void MainEditor::pushGranularParams()
@@ -494,10 +542,16 @@ void MainEditor::timerCallback()
         resamplePanel.setCaptureProgress(re.getCaptureProgress());
 
     // Update MIDI activity indicator
-    if (audioEngine.getMidiManager().consumeActivity())
-        midiActivityLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentGreen));
-    else
-        midiActivityLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textMuted));
+    midiIndicatorActive = audioEngine.getMidiManager().consumeActivity();
+
+    if (statusMessageDeadlineMs > 0.0
+        && juce::Time::getMillisecondCounterHiRes() > statusMessageDeadlineMs)
+    {
+        statusMessageDeadlineMs = 0.0;
+        statusLabel.setVisible(false);
+    }
+
+    repaint(titleBarBounds);
 }
 
 void MainEditor::handleResample()
@@ -620,7 +674,7 @@ void MainEditor::reloadFromHistory(const ResampleHistoryEntry* entry)
         + " | " + juce::String(entry->getLengthSeconds(), 2) + "s"
         + " | 2ch"
         + " | " + juce::String(static_cast<int>(entry->sampleRate)) + " Hz";
-    sampleInfoLabel.setText(info, juce::dontSendNotification);
+    setSampleInfoText(info);
     updateTransportButtons();
 }
 
