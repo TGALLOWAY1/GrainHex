@@ -8,7 +8,7 @@ namespace grainhex {
 
 /**
  * Loads audio files off the audio thread.
- * Supports WAV, AIFF, FLAC.
+ * Supports WAV/WAVE, AIFF, FLAC.
  * Decodes to float and normalizes mono/stereo.
  */
 class AudioFileLoader

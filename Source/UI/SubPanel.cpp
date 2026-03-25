@@ -5,7 +5,7 @@ namespace grainhex {
 static void styleRotarySlider(juce::Slider& slider, double min, double max, double defaultVal, double interval = 0.0)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 16);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
     slider.setRange(min, max, interval);
     slider.setValue(defaultVal, juce::dontSendNotification);
     slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(Theme::accentPurple));
@@ -16,7 +16,7 @@ static void styleRotarySlider(juce::Slider& slider, double min, double max, doub
 
 static void styleLabel(juce::Label& label)
 {
-    label.setJustificationType(juce::Justification::centred);
+    label.setJustificationType(juce::Justification::centredLeft);
     label.setColour(juce::Label::textColourId, juce::Colour(Theme::textNormal));
     label.setFont(juce::Font(Theme::fontLabel));
 }
@@ -30,18 +30,21 @@ static void styleComboBox(juce::ComboBox& box)
 
 SubPanel::SubPanel()
 {
-    // Enable toggle
     addAndMakeVisible(enableToggle);
+    enableToggle.setButtonText("Enabled");
     enableToggle.setToggleState(false, juce::dontSendNotification);
     enableToggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(Theme::accentPurple));
-    enableToggle.onClick = [this] { parameterChanged(); };
+    enableToggle.onClick = [this]
+    {
+        updateContentAlpha();
+        parameterChanged();
+        repaint();
+    };
 
-    // Level: 0-1, default 0.7
     styleRotarySlider(levelSlider, 0.0, 1.0, 0.7, 0.01);
     addAndMakeVisible(levelSlider);
     levelSlider.onValueChange = [this] { parameterChanged(); };
 
-    // Waveform
     waveformBox.addItem("Sine", 1);
     waveformBox.addItem("Triangle", 2);
     waveformBox.setSelectedId(1, juce::dontSendNotification);
@@ -49,15 +52,18 @@ SubPanel::SubPanel()
     addAndMakeVisible(waveformBox);
     waveformBox.onChange = [this] { parameterChanged(); };
 
-    // Mode (Auto/Manual)
     modeBox.addItem("Auto", 1);
     modeBox.addItem("Manual", 2);
     modeBox.setSelectedId(1, juce::dontSendNotification);
     styleComboBox(modeBox);
     addAndMakeVisible(modeBox);
-    modeBox.onChange = [this] { updateModeVisibility(); parameterChanged(); };
+    modeBox.onChange = [this]
+    {
+        updateModeVisibility();
+        resized();
+        parameterChanged();
+    };
 
-    // Pitch snap mode (Strict/Loose) — Auto mode only
     snapModeBox.addItem("Strict", 1);
     snapModeBox.addItem("Loose", 2);
     snapModeBox.setSelectedId(1, juce::dontSendNotification);
@@ -65,7 +71,6 @@ SubPanel::SubPanel()
     addAndMakeVisible(snapModeBox);
     snapModeBox.onChange = [this] { parameterChanged(); };
 
-    // Smoothing speed — Auto mode only
     smoothingBox.addItem("Slow", 1);
     smoothingBox.addItem("Medium", 2);
     smoothingBox.addItem("Fast", 3);
@@ -74,46 +79,39 @@ SubPanel::SubPanel()
     addAndMakeVisible(smoothingBox);
     smoothingBox.onChange = [this] { parameterChanged(); };
 
-    // Note selector (C0-B3) — Manual mode only
     static const char* noteNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
     int itemId = 1;
     for (int octave = 0; octave <= 3; ++octave)
-    {
         for (int note = 0; note < 12; ++note)
-        {
-            juce::String name = juce::String(noteNames[note]) + juce::String(octave);
-            noteBox.addItem(name, itemId++);
-        }
-    }
-    noteBox.setSelectedId(25, juce::dontSendNotification); // C2 default (index 25 = MIDI 36)
+            noteBox.addItem(juce::String(noteNames[note]) + juce::String(octave), itemId++);
+    noteBox.setSelectedId(25, juce::dontSendNotification);
     styleComboBox(noteBox);
     addAndMakeVisible(noteBox);
     noteBox.onChange = [this] { parameterChanged(); };
 
-    // Octave offset
     octaveOffsetBox.addItem("-2", 1);
     octaveOffsetBox.addItem("-1", 2);
     octaveOffsetBox.addItem("0", 3);
-    octaveOffsetBox.setSelectedId(2, juce::dontSendNotification); // Default -1
+    octaveOffsetBox.setSelectedId(2, juce::dontSendNotification);
     styleComboBox(octaveOffsetBox);
     addAndMakeVisible(octaveOffsetBox);
     octaveOffsetBox.onChange = [this] { parameterChanged(); };
 
-    // Granular HP filter frequency
     styleRotarySlider(granularHPSlider, 20.0, 300.0, 100.0, 1.0);
     granularHPSlider.setTextValueSuffix(" Hz");
     granularHPSlider.setSkewFactorFromMidPoint(100.0);
     addAndMakeVisible(granularHPSlider);
     granularHPSlider.onValueChange = [this] { parameterChanged(); };
 
-    // Sub LP filter frequency
     styleRotarySlider(subLPSlider, 40.0, 400.0, 200.0, 1.0);
     subLPSlider.setTextValueSuffix(" Hz");
     subLPSlider.setSkewFactorFromMidPoint(200.0);
     addAndMakeVisible(subLPSlider);
     subLPSlider.onValueChange = [this] { parameterChanged(); };
 
-    // Labels
+    granularHPLabel.setText("Grain Highpass", juce::dontSendNotification);
+    subLPLabel.setText("Sub Lowpass", juce::dontSendNotification);
+
     for (auto* label : { &levelLabel, &waveformLabel, &modeLabel, &snapModeLabel,
                           &smoothingLabel, &noteLabel, &octaveOffsetLabel,
                           &granularHPLabel, &subLPLabel })
@@ -122,15 +120,14 @@ SubPanel::SubPanel()
         addAndMakeVisible(label);
     }
 
-    // Pitch display
     addAndMakeVisible(pitchNoteLabel);
     pitchNoteLabel.setJustificationType(juce::Justification::centred);
     pitchNoteLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentPurple));
-    pitchNoteLabel.setFont(juce::Font(22.0f).boldened());
+    pitchNoteLabel.setFont(juce::Font(Theme::fontTitle + 12.0f).boldened());
     pitchNoteLabel.setText("---", juce::dontSendNotification);
 
-    // Initial mode visibility
     updateModeVisibility();
+    updateContentAlpha();
 }
 
 void SubPanel::paint(juce::Graphics& g)
@@ -143,121 +140,219 @@ void SubPanel::paint(juce::Graphics& g)
 
     g.setColour(juce::Colour(Theme::accentPurple));
     g.setFont(juce::Font(Theme::fontSectionHead).boldened());
-    g.drawText("SUB TUNER", 10, 4, 120, 20, juce::Justification::centredLeft);
+    g.drawText("SUB TUNER", 12, 6, 120, 18, juce::Justification::centredLeft);
 
-    // Draw cents bar next to pitch note label
-    auto pitchArea = pitchNoteLabel.getBounds();
-    int barX = pitchArea.getRight() + 8;
-    int barY = pitchArea.getCentreY() - 15;
-    int barW = 60;
-    int barH = 30;
+    auto drawGroup = [&](juce::Rectangle<int> bounds, const juce::String& title)
+    {
+        g.setColour(juce::Colour(Theme::bgControl));
+        g.fillRoundedRectangle(bounds.toFloat(), Theme::cornerRadius);
+        g.setColour(juce::Colour(Theme::borderSubtle));
+        g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
+        g.setColour(juce::Colour(Theme::textDim));
+        g.setFont(juce::Font(Theme::fontSmall).boldened());
+        g.drawText(title, bounds.getX() + 10, bounds.getY() + 8, bounds.getWidth() - 20, 14,
+                   juce::Justification::centredLeft);
+    };
 
-    // Background bar
-    g.setColour(juce::Colour(Theme::bgControl));
-    g.fillRect(barX, barY, barW, barH);
+    const auto contentAlpha = enableToggle.getToggleState() ? 1.0f : 0.4f;
+    juce::Graphics::ScopedSaveState savedState(g);
+    g.setOpacity(contentAlpha);
+
+    drawGroup(pitchDisplayBounds, "Pitch Display");
+    drawGroup(levelGroupBounds, "Level + Wave");
+    drawGroup(modeGroupBounds, "Pitch + Mode");
+    drawGroup(crossoverGroupBounds, "Crossover");
+
+    auto display = pitchDisplayBounds.reduced(16, 18);
+    display.removeFromTop(16);
+
+    auto noteCard = display.removeFromTop(78).withSizeKeepingCentre(120, 72);
+    g.setColour(juce::Colour(Theme::bgDarkest));
+    g.fillRoundedRectangle(noteCard.toFloat(), 10.0f);
+    g.setColour(juce::Colour(Theme::borderActive));
+    g.drawRoundedRectangle(noteCard.toFloat().reduced(0.5f), 10.0f, 1.0f);
+
+    auto centsText = (pitchConfidence > 0.0f ? juce::String(pitchCents >= 0.0f ? "+" : "")
+                                               + juce::String(static_cast<int>(std::round(pitchCents))) + "ct"
+                                             : juce::String("--"));
+    g.setColour(juce::Colour(Theme::textDim));
+    g.setFont(juce::Font(Theme::fontValue));
+    g.drawText(centsText, noteCard.getX(), noteCard.getBottom() - 22, noteCard.getWidth(), 16,
+               juce::Justification::centred);
+
+    auto centsBar = display.removeFromTop(18);
+    const auto barBounds = centsBar.withTrimmedLeft(8).withTrimmedRight(8).withHeight(8);
+    g.setColour(juce::Colour(Theme::bgDarkest));
+    g.fillRoundedRectangle(barBounds.toFloat(), 4.0f);
     g.setColour(juce::Colour(Theme::border));
-    g.drawRect(barX, barY, barW, barH, 1);
-
-    // Center line
-    int centerX = barX + barW / 2;
+    g.drawRoundedRectangle(barBounds.toFloat(), 4.0f, 1.0f);
     g.setColour(juce::Colour(Theme::textMuted));
-    g.drawVerticalLine(centerX, static_cast<float>(barY), static_cast<float>(barY + barH));
+    g.drawLine(static_cast<float>(barBounds.getCentreX()), static_cast<float>(barBounds.getY()),
+               static_cast<float>(barBounds.getCentreX()), static_cast<float>(barBounds.getBottom()), 1.0f);
 
-    // Cents indicator
     if (pitchConfidence > 0.3f)
     {
-        float centsNorm = juce::jlimit(-50.0f, 50.0f, pitchCents) / 50.0f;
-        int indicatorX = centerX + static_cast<int>(centsNorm * (barW / 2 - 2));
+        const auto centsNorm = juce::jlimit(-50.0f, 50.0f, pitchCents) / 50.0f;
+        const auto indicatorX = static_cast<float>(barBounds.getCentreX()) + centsNorm * (static_cast<float>(barBounds.getWidth()) * 0.5f - 6.0f);
         g.setColour(juce::Colour(Theme::accentPurple));
-        g.fillRect(indicatorX - 1, barY + 2, 3, barH - 4);
+        g.fillRoundedRectangle(indicatorX - 4.0f, static_cast<float>(barBounds.getY()) + 1.0f, 8.0f,
+                               static_cast<float>(barBounds.getHeight()) - 2.0f, 4.0f);
     }
 
-    // Confidence indicator
-    g.setFont(Theme::fontSmall);
-    g.setColour(pitchConfidence > 0.5f ? juce::Colour(Theme::accentGreen) : juce::Colour(Theme::textMuted));
-    g.drawText(juce::String(static_cast<int>(pitchConfidence * 100.0f)) + "%",
-               barX, barY + barH + 2, barW, 14, juce::Justification::centred);
+    auto confidenceBounds = display.withTrimmedTop(8).removeFromTop(16);
+    g.setColour(juce::Colour(Theme::textDim));
+    g.setFont(juce::Font(Theme::fontMetadata));
+    g.drawText("Confidence", confidenceBounds.removeFromTop(10), juce::Justification::centredLeft);
+    auto confidenceBar = confidenceBounds.removeFromTop(5).withWidth(juce::jmax(12, confidenceBounds.getWidth() - 10));
+    g.setColour(juce::Colour(Theme::bgDarkest));
+    g.fillRoundedRectangle(confidenceBar.toFloat(), 2.5f);
+    g.setColour(juce::Colour(Theme::accentGreen).withAlpha(0.85f));
+    g.fillRoundedRectangle(confidenceBar.withWidth(static_cast<int>(static_cast<float>(confidenceBar.getWidth()) * pitchConfidence)).toFloat(), 2.5f);
+    g.setColour(juce::Colour(Theme::textBright));
+    g.drawText(juce::String(static_cast<int>(pitchConfidence * 100.0f)) + "%", confidenceBar.translated(0, 6),
+               juce::Justification::centredLeft);
 }
 
 void SubPanel::resized()
 {
-    auto area = getLocalBounds().reduced(8);
-    area.removeFromTop(22); // Header space
+    auto area = getLocalBounds().reduced(Theme::panelPadding);
+    area.removeFromTop(24);
 
-    const int knobW = 65;
-    const int knobH = 65;
+    auto toggleRow = area.removeFromTop(20);
+    enableToggle.setBounds(toggleRow.removeFromLeft(86));
+    area.removeFromTop(Theme::sectionGap);
+
+    auto leftColumn = area.removeFromLeft(static_cast<int>(area.getWidth() * 0.42f));
+    area.removeFromLeft(Theme::sectionGap);
+    auto rightColumn = area;
+
+    pitchDisplayBounds = leftColumn;
+    auto displayLayout = pitchDisplayBounds.reduced(16, 18);
+    displayLayout.removeFromTop(16);
+    auto noteCard = displayLayout.removeFromTop(78).withSizeKeepingCentre(120, 72);
+    pitchNoteLabel.setBounds(noteCard.withTrimmedBottom(18));
+
+    auto topRight = rightColumn.removeFromTop(static_cast<int>(rightColumn.getHeight() * 0.58f));
+    levelGroupBounds = topRight.removeFromLeft(static_cast<int>(topRight.getWidth() * 0.38f));
+    topRight.removeFromLeft(Theme::sectionGap);
+    modeGroupBounds = topRight;
+    rightColumn.removeFromTop(Theme::sectionGap);
+    crossoverGroupBounds = rightColumn;
+
     const int labelH = 14;
-    const int comboH = 22;
-    const int comboW = 80;
-    const int gap = 4;
+    const int comboH = 24;
+    const int knobSliderH = Theme::knobSize + 18;
 
-    // Row 1: Enable toggle, Level knob, Pitch display, Gran HP, Sub LP knobs
-    auto row1 = area.removeFromTop(knobH + labelH + gap);
-
-    // Enable toggle
-    enableToggle.setBounds(row1.removeFromLeft(60).withHeight(24).withY(row1.getY() + 10));
-    row1.removeFromLeft(gap);
-
-    // Level knob
-    levelLabel.setBounds(row1.getX(), row1.getY(), knobW, labelH);
-    levelSlider.setBounds(row1.getX(), row1.getY() + labelH, knobW, knobH);
-    row1.removeFromLeft(knobW + gap);
-
-    // Pitch display (note name + cents bar area)
-    auto pitchDisplayArea = row1.removeFromLeft(140);
-    pitchNoteLabel.setBounds(pitchDisplayArea.getX(), pitchDisplayArea.getY() + 5,
-                             60, 40);
-    // Cents bar is painted in paint()
-
-    row1.removeFromLeft(gap);
-
-    // Gran HP knob
-    granularHPLabel.setBounds(row1.getX(), row1.getY(), knobW, labelH);
-    granularHPSlider.setBounds(row1.getX(), row1.getY() + labelH, knobW, knobH);
-    row1.removeFromLeft(knobW + gap);
-
-    // Sub LP knob
-    subLPLabel.setBounds(row1.getX(), row1.getY(), knobW, labelH);
-    subLPSlider.setBounds(row1.getX(), row1.getY() + labelH, knobW, knobH);
-
-    area.removeFromTop(gap);
-
-    // Row 2: Combo boxes — Waveform, Mode, Snap/Note, Smoothing, Octave
-    auto row2 = area.removeFromTop(comboH + labelH + gap);
-    int cx = row2.getX();
-    int comboGap = 8;
-
-    struct ComboPair { juce::ComboBox* box; juce::Label* label; };
-    ComboPair combos[] = {
-        { &waveformBox, &waveformLabel },
-        { &modeBox, &modeLabel },
-        { &snapModeBox, &snapModeLabel },
-        { &smoothingBox, &smoothingLabel },
-        { &noteBox, &noteLabel },
-        { &octaveOffsetBox, &octaveOffsetLabel }
-    };
-
-    for (auto& cp : combos)
     {
-        cp.label->setBounds(cx, row2.getY(), comboW, labelH);
-        cp.box->setBounds(cx, row2.getY() + labelH, comboW, comboH);
-        cx += comboW + comboGap;
+        auto levelArea = levelGroupBounds.reduced(10, 10);
+        levelArea.removeFromTop(18);
+        levelLabel.setBounds(levelArea.removeFromTop(labelH));
+        levelSlider.setBounds(levelArea.removeFromTop(knobSliderH));
+        levelArea.removeFromTop(2);
+        waveformLabel.setBounds(levelArea.removeFromTop(labelH));
+        waveformBox.setBounds(levelArea.removeFromTop(comboH));
+    }
+
+    {
+        auto modeArea = modeGroupBounds.reduced(10, 10);
+        modeArea.removeFromTop(18);
+        modeLabel.setBounds(modeArea.removeFromTop(labelH));
+        modeBox.setBounds(modeArea.removeFromTop(comboH));
+        modeArea.removeFromTop(6);
+
+        auto upperRow = modeArea.removeFromTop(labelH + comboH + 4);
+        auto lowerRow = modeArea.removeFromTop(labelH + comboH + 4);
+        const int halfWidth = (upperRow.getWidth() - Theme::controlGap) / 2;
+
+        if (modeBox.getSelectedId() == 1)
+        {
+            auto snapArea = upperRow.removeFromLeft(halfWidth);
+            upperRow.removeFromLeft(Theme::controlGap);
+            auto smoothArea = upperRow;
+
+            snapModeLabel.setBounds(snapArea.removeFromTop(labelH));
+            snapModeBox.setBounds(snapArea.removeFromTop(comboH));
+            smoothingLabel.setBounds(smoothArea.removeFromTop(labelH));
+            smoothingBox.setBounds(smoothArea.removeFromTop(comboH));
+
+            noteLabel.setBounds(juce::Rectangle<int>());
+            noteBox.setBounds(juce::Rectangle<int>());
+            octaveOffsetLabel.setBounds(juce::Rectangle<int>());
+            octaveOffsetBox.setBounds(juce::Rectangle<int>());
+        }
+        else
+        {
+            auto noteArea = upperRow.removeFromLeft(halfWidth);
+            upperRow.removeFromLeft(Theme::controlGap);
+            auto octaveArea = upperRow;
+
+            noteLabel.setBounds(noteArea.removeFromTop(labelH));
+            noteBox.setBounds(noteArea.removeFromTop(comboH));
+            octaveOffsetLabel.setBounds(octaveArea.removeFromTop(labelH));
+            octaveOffsetBox.setBounds(octaveArea.removeFromTop(comboH));
+
+            snapModeLabel.setBounds(juce::Rectangle<int>());
+            snapModeBox.setBounds(juce::Rectangle<int>());
+            smoothingLabel.setBounds(juce::Rectangle<int>());
+            smoothingBox.setBounds(juce::Rectangle<int>());
+        }
+    }
+
+    {
+        auto crossoverArea = crossoverGroupBounds.reduced(10, 10);
+        crossoverArea.removeFromTop(18);
+        const int knobWidth = (crossoverArea.getWidth() - Theme::controlGap) / 2;
+
+        auto hpArea = crossoverArea.removeFromLeft(knobWidth);
+        crossoverArea.removeFromLeft(Theme::controlGap);
+        auto lpArea = crossoverArea;
+
+        granularHPLabel.setBounds(hpArea.removeFromTop(labelH));
+        granularHPSlider.setBounds(hpArea.removeFromTop(knobSliderH));
+
+        subLPLabel.setBounds(lpArea.removeFromTop(labelH));
+        subLPSlider.setBounds(lpArea.removeFromTop(knobSliderH));
     }
 }
 
 void SubPanel::updateModeVisibility()
 {
-    bool isAuto = (modeBox.getSelectedId() == 1);
-
-    // Auto-mode controls
+    const bool isAuto = (modeBox.getSelectedId() == 1);
     snapModeBox.setVisible(isAuto);
     snapModeLabel.setVisible(isAuto);
     smoothingBox.setVisible(isAuto);
     smoothingLabel.setVisible(isAuto);
-
-    // Manual-mode controls
     noteBox.setVisible(!isAuto);
     noteLabel.setVisible(!isAuto);
+    octaveOffsetBox.setVisible(!isAuto);
+    octaveOffsetLabel.setVisible(!isAuto);
+}
+
+void SubPanel::updateContentAlpha()
+{
+    const auto alpha = enableToggle.getToggleState() ? 1.0f : 0.4f;
+    for (auto* component : { static_cast<juce::Component*>(&levelSlider),
+                             static_cast<juce::Component*>(&levelLabel),
+                             static_cast<juce::Component*>(&waveformBox),
+                             static_cast<juce::Component*>(&waveformLabel),
+                             static_cast<juce::Component*>(&modeBox),
+                             static_cast<juce::Component*>(&modeLabel),
+                             static_cast<juce::Component*>(&snapModeBox),
+                             static_cast<juce::Component*>(&snapModeLabel),
+                             static_cast<juce::Component*>(&smoothingBox),
+                             static_cast<juce::Component*>(&smoothingLabel),
+                             static_cast<juce::Component*>(&noteBox),
+                             static_cast<juce::Component*>(&noteLabel),
+                             static_cast<juce::Component*>(&octaveOffsetBox),
+                             static_cast<juce::Component*>(&octaveOffsetLabel),
+                             static_cast<juce::Component*>(&granularHPSlider),
+                             static_cast<juce::Component*>(&granularHPLabel),
+                             static_cast<juce::Component*>(&subLPSlider),
+                             static_cast<juce::Component*>(&subLPLabel),
+                             static_cast<juce::Component*>(&pitchNoteLabel) })
+    {
+        component->setAlpha(alpha);
+    }
 }
 
 void SubPanel::parameterChanged()
@@ -271,7 +366,7 @@ void SubPanel::setDetectedPitch(const PitchInfo& pitch)
     pitchNoteLabel.setText(pitch.getNoteName(), juce::dontSendNotification);
     pitchCents = pitch.centsOffset;
     pitchConfidence = pitch.confidence;
-    repaint(); // Repaint cents bar
+    repaint();
 }
 
 bool SubPanel::getEnabled() const { return enableToggle.getToggleState(); }
@@ -314,10 +409,10 @@ int SubPanel::getOctaveOffset() const
 
 int SubPanel::getManualMidiNote() const
 {
-    // noteBox items are 1-indexed, representing C0 (MIDI 12) through B3 (MIDI 59)
-    int selectedId = noteBox.getSelectedId();
-    if (selectedId < 1) return 36; // C2 default
-    return 11 + selectedId; // Item 1 = C0 = MIDI 12
+    const auto selectedId = noteBox.getSelectedId();
+    if (selectedId < 1)
+        return 36;
+    return 11 + selectedId;
 }
 
 float SubPanel::getGranularHPFreq() const { return static_cast<float>(granularHPSlider.getValue()); }

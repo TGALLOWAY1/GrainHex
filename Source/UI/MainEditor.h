@@ -46,6 +46,7 @@ public:
 private:
     void loadFile(const juce::File& file);
     void loadFactorySample(const FactorySample& sample);
+    void setSampleInfoText(const juce::String& text);
     void updateStatusLabel(const juce::String& text);
     void updateTransportButtons();
 
@@ -81,7 +82,6 @@ private:
     // Info
     juce::Label rootNoteLabel;
     juce::Label sampleInfoLabel;
-    juce::Label midiActivityLabel;
 
     // === CENTER ===
     GranularPanel granularPanel;
@@ -102,6 +102,15 @@ private:
     juce::ToggleButton monoLockToggle { "Mono" };
     juce::TextButton exportButton { "Export WAV" };
     juce::Label statusLabel;
+
+    juce::String sampleInfoText;
+    double statusMessageDeadlineMs = 0.0;
+    bool midiIndicatorActive = false;
+
+    juce::Rectangle<int> titleBarBounds;
+    juce::Rectangle<int> transportBarBounds;
+    juce::Rectangle<int> footerBarBounds;
+    juce::Rectangle<int> midiIndicatorBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainEditor)
 };

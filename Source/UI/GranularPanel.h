@@ -62,6 +62,10 @@ private:
     juce::Label windowShapeLabel   { {}, "Window" };
     juce::Label directionLabel     { {}, "Direction" };
 
+    juce::Rectangle<int> coreGroupBounds;
+    juce::Rectangle<int> scatterGroupBounds;
+    juce::Rectangle<int> tuningGroupBounds;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GranularPanel)
 };
 

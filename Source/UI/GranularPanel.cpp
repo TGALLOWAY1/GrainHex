@@ -5,7 +5,7 @@ namespace grainhex {
 static void styleRotarySlider(juce::Slider& slider, double min, double max, double defaultVal, double interval = 0.0)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 16);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 16);
     slider.setRange(min, max, interval);
     slider.setValue(defaultVal, juce::dontSendNotification);
     slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(Theme::accentGreen));
@@ -111,67 +111,100 @@ void GranularPanel::paint(juce::Graphics& g)
 
     g.setColour(juce::Colour(Theme::accentGreen));
     g.setFont(juce::Font(Theme::fontSectionHead).boldened());
-    g.drawText("GRANULAR", 10, 4, 120, 20, juce::Justification::centredLeft);
+    g.drawText("GRANULAR", 12, 6, 120, 18, juce::Justification::centredLeft);
+
+    auto drawGroup = [&](juce::Rectangle<int> bounds, const juce::String& title)
+    {
+        g.setColour(juce::Colour(Theme::bgControl));
+        g.fillRoundedRectangle(bounds.toFloat(), Theme::cornerRadius);
+        g.setColour(juce::Colour(Theme::borderSubtle));
+        g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), Theme::cornerRadius, 1.0f);
+        g.setColour(juce::Colour(Theme::textDim));
+        g.setFont(juce::Font(Theme::fontSmall).boldened());
+        g.drawText(title, bounds.getX() + 10, bounds.getY() + 8, bounds.getWidth() - 20, 14,
+                   juce::Justification::centredLeft);
+    };
+
+    drawGroup(coreGroupBounds, "Core");
+    drawGroup(scatterGroupBounds, "Scatter");
+    drawGroup(tuningGroupBounds, "Tuning");
 }
 
 void GranularPanel::resized()
 {
-    auto area = getLocalBounds().reduced(8);
-    area.removeFromTop(22); // Header space
+    auto area = getLocalBounds().reduced(Theme::panelPadding);
+    area.removeFromTop(26);
 
-    const int knobW = 75;
-    const int knobH = 75;
-    const int labelH = 16;
-    const int comboH = 24;
-    const int comboW = 90;
-    const int gap = 4;
+    const int groupGap = Theme::sectionGap;
+    const int groupWidth = (area.getWidth() - groupGap * 2) / 3;
+    coreGroupBounds = area.removeFromLeft(groupWidth);
+    area.removeFromLeft(groupGap);
+    scatterGroupBounds = area.removeFromLeft(groupWidth);
+    area.removeFromLeft(groupGap);
+    tuningGroupBounds = area;
 
-    // Row 1: Size, Count, Position, Spray, Pitch, Spread (6 knobs)
-    auto row1 = area.removeFromTop(knobH + labelH + gap);
-    int numKnobs = 6;
-    int totalKnobWidth = numKnobs * knobW;
-    int spacing = (row1.getWidth() - totalKnobWidth) / (numKnobs - 1);
-    spacing = std::max(spacing, 2);
-
-    struct KnobPair { juce::Slider* slider; juce::Label* label; };
-    KnobPair knobs[] = {
-        { &grainSizeSlider, &grainSizeLabel },
-        { &grainCountSlider, &grainCountLabel },
-        { &positionSlider, &positionLabel },
-        { &spraySlider, &sprayLabel },
-        { &pitchSlider, &pitchLabel },
-        { &spreadSlider, &spreadLabel }
+    auto layoutGroup = [](juce::Rectangle<int> bounds)
+    {
+        bounds.reduce(10, 10);
+        bounds.removeFromTop(18);
+        return bounds;
     };
 
-    int xPos = row1.getX();
-    for (auto& kp : knobs)
+    auto core = layoutGroup(coreGroupBounds);
+    auto scatter = layoutGroup(scatterGroupBounds);
+    auto tuning = layoutGroup(tuningGroupBounds);
+
+    const int labelH = 14;
+    const int comboH = 24;
+    const int smallKnob = Theme::knobSize;
+    const int largeKnob = Theme::knobSizeLarge;
+    const int sliderValueH = 18;
+
     {
-        kp.label->setBounds(xPos, row1.getY(), knobW, labelH);
-        kp.slider->setBounds(xPos, row1.getY() + labelH, knobW, knobH);
-        xPos += knobW + spacing;
+        auto topRow = core.removeFromTop(labelH + smallKnob + sliderValueH + 8);
+        auto sizeArea = topRow.removeFromLeft((topRow.getWidth() - Theme::controlGap) / 2);
+        topRow.removeFromLeft(Theme::controlGap);
+        auto countArea = topRow;
+
+        grainSizeLabel.setBounds(sizeArea.removeFromTop(labelH));
+        grainSizeSlider.setBounds(sizeArea.removeFromTop(smallKnob + sliderValueH));
+
+        grainCountLabel.setBounds(countArea.removeFromTop(labelH));
+        grainCountSlider.setBounds(countArea.removeFromTop(smallKnob + sliderValueH));
+
+        core.removeFromTop(2);
+        windowShapeLabel.setBounds(core.removeFromTop(labelH));
+        windowShapeBox.setBounds(core.removeFromTop(comboH));
     }
 
-    area.removeFromTop(gap);
-
-    // Row 2: Combo boxes (Quantize, Window, Direction)
-    auto row2 = area.removeFromTop(comboH + labelH + gap);
-
-    struct ComboPair { juce::ComboBox* box; juce::Label* label; };
-    ComboPair combos[] = {
-        { &pitchQuantizeBox, &pitchQuantizeLabel },
-        { &windowShapeBox, &windowShapeLabel },
-        { &directionBox, &directionLabel }
-    };
-
-    int comboSpacing = (row2.getWidth() - 3 * comboW) / 4;
-    comboSpacing = std::max(comboSpacing, 8);
-    int cx = row2.getX() + comboSpacing;
-
-    for (auto& cp : combos)
     {
-        cp.label->setBounds(cx, row2.getY(), comboW, labelH);
-        cp.box->setBounds(cx, row2.getY() + labelH, comboW, comboH);
-        cx += comboW + comboSpacing;
+        auto positionArea = scatter.removeFromTop(labelH + largeKnob + sliderValueH + 8);
+        positionLabel.setBounds(positionArea.removeFromTop(labelH));
+        positionSlider.setBounds(positionArea.removeFromTop(largeKnob + sliderValueH));
+
+        scatter.removeFromTop(2);
+        auto lowerRow = scatter.removeFromTop(labelH + smallKnob + sliderValueH + 4);
+        sprayLabel.setBounds(lowerRow.removeFromTop(labelH));
+        spraySlider.setBounds(lowerRow.removeFromTop(smallKnob + sliderValueH));
+
+        scatter.removeFromTop(2);
+        directionLabel.setBounds(scatter.removeFromTop(labelH));
+        directionBox.setBounds(scatter.removeFromTop(comboH));
+    }
+
+    {
+        auto pitchArea = tuning.removeFromTop(labelH + largeKnob + sliderValueH + 8);
+        pitchLabel.setBounds(pitchArea.removeFromTop(labelH));
+        pitchSlider.setBounds(pitchArea.removeFromTop(largeKnob + sliderValueH));
+
+        tuning.removeFromTop(2);
+        auto lowerRow = tuning.removeFromTop(labelH + smallKnob + sliderValueH + 4);
+        spreadLabel.setBounds(lowerRow.removeFromTop(labelH));
+        spreadSlider.setBounds(lowerRow.removeFromTop(smallKnob + sliderValueH));
+
+        tuning.removeFromTop(2);
+        pitchQuantizeLabel.setBounds(tuning.removeFromTop(labelH));
+        pitchQuantizeBox.setBounds(tuning.removeFromTop(comboH));
     }
 }
 

@@ -44,6 +44,7 @@ public:
 private:
     void parameterChanged();
     void updateModeVisibility();
+    void updateContentAlpha();
 
     // Controls
     juce::ToggleButton enableToggle { "Sub" };
@@ -79,6 +80,11 @@ private:
     juce::Label pitchNoteLabel;
     float pitchCents = 0.0f;
     float pitchConfidence = 0.0f;
+
+    juce::Rectangle<int> pitchDisplayBounds;
+    juce::Rectangle<int> levelGroupBounds;
+    juce::Rectangle<int> modeGroupBounds;
+    juce::Rectangle<int> crossoverGroupBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SubPanel)
 };

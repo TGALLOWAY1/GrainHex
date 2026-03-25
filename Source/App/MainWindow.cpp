@@ -10,8 +10,8 @@ MainWindow::MainWindow(AudioEngine& engine, SourceSampleManager& sampleManager)
 {
     setUsingNativeTitleBar(true);
     setContentOwned(new MainEditor(engine, sampleManager), true);
-    setResizable(true, true);
-    setResizeLimits(900, 600, 2400, 1400);
+    setResizable(false, false);
+    setResizeLimits(1100, 780, 1100, 780);
     centreWithSize(getWidth(), getHeight());
     setVisible(true);
 }

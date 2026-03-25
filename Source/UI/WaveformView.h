@@ -4,6 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "Audio/AudioTypes.h"
 #include "UI/GrainHexLookAndFeel.h"
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -44,6 +45,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     // Timer for playhead updates
     void timerCallback() override;
@@ -52,11 +55,24 @@ private:
     void generatePeakData();
     float xToNormalized(float x) const;
     float normalizedToX(float norm) const;
+    juce::Rectangle<float> getWaveBounds() const;
+    juce::Rectangle<float> getLoopStartHandleBounds() const;
+    juce::Rectangle<float> getLoopEndHandleBounds() const;
+    juce::String formatHoverText(float norm) const;
 
     struct PeakData
     {
-        float minVal = 0.0f;
-        float maxVal = 0.0f;
+        std::array<float, 2> minVals { 0.0f, 0.0f };
+        std::array<float, 2> maxVals { 0.0f, 0.0f };
+        int numChannels = 0;
+    };
+
+    enum class DragMode
+    {
+        none,
+        selectingRegion,
+        draggingLoopStart,
+        draggingLoopEnd
     };
 
     std::shared_ptr<juce::AudioBuffer<float>> sourceBuffer;
@@ -73,12 +89,17 @@ private:
     int64_t loopEndSample = 0;
 
     // Drag state
-    bool isDragging = false;
+    DragMode dragMode = DragMode::none;
     float dragStartNorm = 0.0f;
     float dragEndNorm = 0.0f;
 
     // Active grain positions (normalized)
     std::vector<float> grainPositions;
+
+    float hoverNorm = -1.0f;
+    juce::Point<float> lastMousePosition;
+    bool hoverLoopStart = false;
+    bool hoverLoopEnd = false;
 
     LoopRegionCallback loopCallback;
 
