@@ -28,13 +28,25 @@ public:
         categoryLabel.setText("Category", juce::dontSendNotification);
         categoryLabel.setJustificationType(juce::Justification::centredRight);
         categoryLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::textDim));
+        categoryLabel.setFont(juce::Font(Theme::fontSmall));
 
         // Sample list
         addAndMakeVisible(listBox);
         listBox.setModel(this);
-        listBox.setRowHeight(28);
+        listBox.setRowHeight(32);
         listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(Theme::bgControl));
         listBox.setColour(juce::ListBox::outlineColourId, juce::Colour(Theme::border));
+        listBox.addMouseListener(this, true);
+
+        // Import button
+        addAndMakeVisible(importButton);
+        importButton.setButtonText("Import WAV");
+        importButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonUtility));
+        importButton.onClick = [this]
+        {
+            if (onImportSample)
+                onImportSample();
+        };
 
         // Load button
         addAndMakeVisible(loadButton);
@@ -51,6 +63,7 @@ public:
         // Preview button
         addAndMakeVisible(previewButton);
         previewButton.setButtonText("Preview");
+        previewButton.setColour(juce::TextButton::buttonColourId, juce::Colour(Theme::buttonSecondary));
         previewButton.onClick = [this]
         {
             int selected = listBox.getSelectedRow();
@@ -60,7 +73,7 @@ public:
 
         // Title
         addAndMakeVisible(titleLabel);
-        titleLabel.setText("BROWSER", juce::dontSendNotification);
+        titleLabel.setText("FACTORY LIBRARY", juce::dontSendNotification);
         titleLabel.setFont(juce::Font(Theme::fontSectionHead).boldened());
         titleLabel.setColour(juce::Label::textColourId, juce::Colour(Theme::accentOrange));
 
@@ -105,6 +118,22 @@ public:
         listBox.repaint();
     }
 
+    void setLoadedSample(const juce::String& name, const juce::String& category)
+    {
+        loadedSampleName = name;
+        loadedSampleCategory = category;
+        hasLoadedFactorySample = true;
+        listBox.repaint();
+    }
+
+    void clearLoadedSample()
+    {
+        loadedSampleName.clear();
+        loadedSampleCategory.clear();
+        hasLoadedFactorySample = false;
+        listBox.repaint();
+    }
+
     // ListBoxModel
     int getNumRows() override { return static_cast<int>(filteredSamples.size()); }
 
@@ -116,15 +145,31 @@ public:
 
         auto& sample = filteredSamples[static_cast<size_t>(rowNumber)];
 
+        const bool isHovered = rowNumber == hoveredRow;
+        const bool isLoaded = hasLoadedFactorySample
+            && sample.name == loadedSampleName
+            && sample.category == loadedSampleCategory;
+
         if (rowIsSelected)
+            g.fillAll(juce::Colour(Theme::bgElevated));
+        else if (isHovered)
             g.fillAll(juce::Colour(Theme::bgHover));
 
+        if (rowIsSelected || isLoaded)
+        {
+            g.setColour(juce::Colour(Theme::accentOrange));
+            g.fillRect(0, 2, 3, height - 4);
+        }
+
         g.setColour(juce::Colour(Theme::textNormal));
-        g.setFont(12.0f);
+        auto rowFont = juce::Font(Theme::fontValue);
+        if (isLoaded)
+            rowFont = rowFont.boldened();
+        g.setFont(rowFont);
         g.drawText(sample.name, 8, 0, width - 80, height, juce::Justification::centredLeft);
 
         g.setColour(juce::Colour(Theme::textDim));
-        g.setFont(10.0f);
+        g.setFont(juce::Font(Theme::fontSmall));
         g.drawText(sample.category, width - 75, 0, 70, height, juce::Justification::centredRight);
     }
 
@@ -144,32 +189,55 @@ public:
                                Theme::cornerRadius, Theme::borderWidth);
     }
 
+    void mouseMove(const juce::MouseEvent& e) override
+    {
+        auto point = e.getEventRelativeTo(&listBox).position;
+        auto row = listBox.getRowContainingPosition(static_cast<int>(point.x), static_cast<int>(point.y));
+        if (row != hoveredRow)
+        {
+            hoveredRow = row;
+            listBox.repaint();
+        }
+    }
+
+    void mouseExit(const juce::MouseEvent&) override
+    {
+        if (hoveredRow >= 0)
+        {
+            hoveredRow = -1;
+            listBox.repaint();
+        }
+    }
+
     void resized() override
     {
         auto area = getLocalBounds().reduced(Theme::panelPadding);
 
         auto titleRow = area.removeFromTop(22);
         titleLabel.setBounds(titleRow);
-        area.removeFromTop(4);
+        area.removeFromTop(Theme::controlGap);
 
-        auto filterRow = area.removeFromTop(24);
+        auto filterRow = area.removeFromTop(26);
         categoryLabel.setBounds(filterRow.removeFromLeft(60));
-        filterRow.removeFromLeft(4);
+        filterRow.removeFromLeft(Theme::controlGap);
         categoryBox.setBounds(filterRow);
-        area.removeFromTop(4);
+        area.removeFromTop(Theme::controlGap);
 
-        auto buttonRow = area.removeFromBottom(28);
-        loadButton.setBounds(buttonRow.removeFromRight(60));
-        buttonRow.removeFromRight(4);
-        previewButton.setBounds(buttonRow.removeFromRight(65));
+        auto buttonRow = area.removeFromBottom(30);
+        importButton.setBounds(buttonRow.removeFromLeft(92));
+        buttonRow.removeFromLeft(Theme::controlGap);
+        previewButton.setBounds(buttonRow.removeFromLeft(74));
+        buttonRow.removeFromLeft(Theme::controlGap);
+        loadButton.setBounds(buttonRow.removeFromLeft(64));
 
-        area.removeFromBottom(4);
+        area.removeFromBottom(Theme::controlGap);
         listBox.setBounds(area);
     }
 
     // Callbacks
     std::function<void(const FactorySample&)> onLoadSample;
     std::function<void(const FactorySample&)> onPreviewSample;
+    std::function<void()> onImportSample;
 
     // Get a factory sample to use as initial default sound
     const FactorySample* getDefaultSample() const
@@ -186,8 +254,13 @@ private:
     juce::ComboBox categoryBox;
     juce::Label categoryLabel;
     juce::ListBox listBox;
+    juce::TextButton importButton;
     juce::TextButton loadButton;
     juce::TextButton previewButton;
+    int hoveredRow = -1;
+    juce::String loadedSampleName;
+    juce::String loadedSampleCategory;
+    bool hasLoadedFactorySample = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SampleBrowser)
 };

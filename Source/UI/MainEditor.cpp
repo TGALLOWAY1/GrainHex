@@ -26,6 +26,7 @@ MainEditor::MainEditor(AudioEngine& engine, SourceSampleManager& manager)
     addAndMakeVisible(sampleBrowser);
     sampleBrowser.onLoadSample = [this](const FactorySample& sample) { loadFactorySample(sample); };
     sampleBrowser.onPreviewSample = [this](const FactorySample& sample) { loadFactorySample(sample); };
+    sampleBrowser.onImportSample = [this] { loadButton.triggerClick(); };
 
     // Transport buttons
     addAndMakeVisible(playButton);
@@ -407,6 +408,7 @@ void MainEditor::loadFile(const juce::File& file)
                 + " | " + juce::String(meta.numChannels) + "ch"
                 + " | " + juce::String(static_cast<int>(meta.originalSampleRate)) + " Hz";
             setSampleInfoText(info);
+            sampleBrowser.clearLoadedSample();
             updateTransportButtons();
         }
 
@@ -439,6 +441,7 @@ void MainEditor::loadFactorySample(const FactorySample& sample)
     setSampleInfoText(info);
 
     updateTransportButtons();
+    sampleBrowser.setLoadedSample(sample.name, sample.category);
     updateStatusLabel("Loaded factory sample: " + sample.name);
 }
 
@@ -675,6 +678,7 @@ void MainEditor::reloadFromHistory(const ResampleHistoryEntry* entry)
         + " | 2ch"
         + " | " + juce::String(static_cast<int>(entry->sampleRate)) + " Hz";
     setSampleInfoText(info);
+    sampleBrowser.clearLoadedSample();
     updateTransportButtons();
 }
 
